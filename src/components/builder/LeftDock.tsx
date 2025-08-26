@@ -4,6 +4,14 @@ import { useState, useEffect, type ReactNode } from 'react'
 import type { Editor } from 'grapesjs'
 import GlobalStylesPanel from './GlobalStylesPanel'
 
+interface DockItem {
+  id: string
+  command?: string
+  label: string
+  icon: ReactNode
+  active: boolean
+}
+
 export default function LeftDock() {
   const [activePanel, setActivePanel] = useState<string>('pages-layers')
   const [editor, setEditor] = useState<Editor | null>(null)
@@ -15,14 +23,6 @@ export default function LeftDock() {
     layersElement?: HTMLElement
     panelElement?: HTMLElement
   } | null>(null)
-
-  interface DockItem {
-    id: string
-    command?: string
-    icon: ReactNode
-    label: string
-    active: boolean
-  }
 
   const dockItems: DockItem[] = [
     {
