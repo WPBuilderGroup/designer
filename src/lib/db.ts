@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from 'pg'
+import { logger } from './logger'
 
 // Global connection pool
 let globalPool: Pool | null = null
@@ -22,10 +23,10 @@ export function getPool(): Pool {
 
     // Handle pool errors
     globalPool.on('error', (err) => {
-      console.error('Unexpected error on idle client', err)
+      logger.error('Unexpected error on idle client', err)
     })
 
-    console.log('Database pool initialized successfully')
+    logger.info('Database pool initialized successfully')
   }
 
   return globalPool
@@ -40,19 +41,17 @@ export async function query<T = any>(text: string, params?: any[]): Promise<{ ro
     const start = Date.now()
     const result = await client.query(text, params)
     const duration = Date.now() - start
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
-    }
+
+    logger.debug('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
     
     return {
       rows: result.rows,
       rowCount: result.rowCount ?? 0
     }
   } catch (error) {
-    console.error('Database query error:', error)
-    console.error('Query:', text)
-    console.error('Params:', params)
+    logger.error('Database query error:', error)
+    logger.error('Query:', text)
+    logger.error('Params:', params)
     throw error
   } finally {
     client.release()
@@ -83,7 +82,7 @@ export async function healthCheck(): Promise<boolean> {
     await query('SELECT 1 as health_check')
     return true
   } catch (error) {
-    console.error('Database health check failed:', error)
+    logger.error('Database health check failed:', error)
     return false
   }
 }
@@ -93,7 +92,7 @@ export async function closePool(): Promise<void> {
   if (globalPool) {
     await globalPool.end()
     globalPool = null
-    console.log('Database pool closed')
+    logger.info('Database pool closed')
   }
 }
 
@@ -134,7 +133,7 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
     const projectResult = await query<{ id: string }>(projectQuery, [projectSlug])
     
     if (projectResult.rows.length === 0) {
-      console.warn(`Project not found: ${projectSlug}`)
+      logger.warn(`Project not found: ${projectSlug}`)
       return null
     }
     
@@ -149,13 +148,13 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
     const pageResult = await query<PageData>(pageQuery, [projectId, pageSlug])
     
     if (pageResult.rows.length === 0) {
-      console.log(`Page not found: ${projectSlug}/${pageSlug}`)
+      logger.warn(`Page not found: ${projectSlug}/${pageSlug}`)
       return null
     }
     
     return pageResult.rows[0]
   } catch (error) {
-    console.error('Error getting page data:', error)
+    logger.error('Error getting page data:', error)
     throw error
   }
 }
@@ -175,7 +174,7 @@ export async function upsertPageData(projectSlug: string, pageSlug: string, data
       const projectResult = await client.query(projectQuery, [projectSlug])
       
       if (projectResult.rows.length === 0) {
-        console.warn(`Project not found: ${projectSlug}`)
+        logger.warn(`Project not found: ${projectSlug}`)
         return false
       }
       
@@ -203,12 +202,11 @@ export async function upsertPageData(projectSlug: string, pageSlug: string, data
         data['gjs-components'] ? JSON.stringify(data['gjs-components']) : null,
         data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null
       ])
-      
-      console.log(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
+
       return result.rows.length > 0
     })
   } catch (error) {
-    console.error('Error upserting page data:', error)
+    logger.error('Error upserting page data:', error)
     throw error
   }
 }
@@ -236,7 +234,7 @@ export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Pro
       page_count: parseInt(row.page_count) || 0
     })) as any
   } catch (error) {
-    console.error('Error getting projects by workspace:', error)
+    logger.error('Error getting projects by workspace:', error)
     throw error
   }
 }
@@ -259,7 +257,7 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
         `
         const newTenantResult = await client.query(createTenantQuery, [workspaceSlug, workspaceSlug])
         tenantId = newTenantResult.rows[0].id
-        console.log(`Created new tenant: ${workspaceSlug}`)
+        logger.info(`Created new tenant: ${workspaceSlug}`)
       } else {
         tenantId = tenantResult.rows[0].id
       }
@@ -276,11 +274,11 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
         return null
       }
 
-      console.log(`Project created successfully: ${projectSlug}`)
+      logger.info(`Project created successfully: ${projectSlug}`)
       return projectResult.rows[0]
     })
   } catch (error) {
-    console.error('Error creating project:', error)
+    logger.error('Error creating project:', error)
     throw error
   }
 }
@@ -316,7 +314,7 @@ export async function getPagesByProject(projectSlug: string): Promise<PageData[]
 
     return pagesResult.rows
   } catch (error) {
-    console.error('Error getting pages by project:', error)
+    logger.error('Error getting pages by project:', error)
     throw error
   }
 }
@@ -348,11 +346,11 @@ export async function createPage(projectSlug: string, pageSlug: string): Promise
         return null
       }
 
-      console.log(`Page created successfully: ${pageSlug}`)
+      logger.info(`Page created successfully: ${pageSlug}`)
       return pageResult.rows[0]
     })
   } catch (error) {
-    console.error('Error creating page:', error)
+    logger.error('Error creating page:', error)
     throw error
   }
 }
