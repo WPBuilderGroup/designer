@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProjectsByWorkspace, createProject } from '@/lib/db'
+import { safeJson } from '@/lib/api'
 
 export async function GET(request: NextRequest) {
   try {
@@ -44,8 +45,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { name, slug } = body
+    const [body, jsonError] = await safeJson(request)
+    if (jsonError) return jsonError
+    const { name, slug } = body as { name?: string; slug?: string }
 
     if (!name || !slug) {
       return NextResponse.json(

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPagesByProject, createPage } from '@/lib/db'
+import { safeJson } from '@/lib/api'
 
 export async function GET(request: NextRequest) {
   try {
@@ -52,8 +53,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { slug } = body
+    const [body, jsonError] = await safeJson(request)
+    if (jsonError) return jsonError
+    const { slug } = body as { slug?: string }
 
     if (!slug) {
       return NextResponse.json(

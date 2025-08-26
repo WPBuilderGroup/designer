@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { safeJson } from '@/lib/api'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -7,7 +8,7 @@ export async function GET(req: NextRequest) {
   const tag = (url.searchParams.get('tag') || '').trim()
 
   const clauses: string[] = []
-  const params: any[] = []
+  const params: unknown[] = []
   if (q) { params.push(`%${q.toLowerCase()}%`); clauses.push(`lower(name) like $${params.length}`) }
   if (tag) { params.push(tag); clauses.push(`(meta->'tags')::jsonb ? $${params.length}`) }
 
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+  const [body, jsonError] = await safeJson<Record<string, unknown>>(req)
+  if (jsonError) return jsonError
   const { name, type = 'page', grapesJson, meta } = body as {
     name?: string
     type?: string

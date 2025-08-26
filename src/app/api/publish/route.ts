@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPageData } from '@/lib/db'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
+import { safeJson } from '@/lib/api'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { project, page } = body
+    const [body, jsonError] = await safeJson(request)
+    if (jsonError) return jsonError
+    const { project, page } = body as { project?: string; page?: string }
 
     if (!project || !page) {
       return NextResponse.json(

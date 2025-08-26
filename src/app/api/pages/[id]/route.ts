@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { safeJson } from '@/lib/api'
 
 // Update page by id with grapesJson and optional seo, return {page}
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   const { id } = await context.params
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+  const [body, jsonError] = await safeJson<Record<string, unknown>>(req)
+  if (jsonError) return jsonError
   const g = (body['grapesJson'] || {}) as Record<string, unknown>
-  const seo: unknown = (body['seo'] ?? null)
+  const seo: unknown = body['seo'] ?? null
 
   const gHtml = (g['gjs-html'] as string) || ''
   const gCss = (g['gjs-css'] as string) || ''
@@ -27,7 +29,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Optional: update SEO if column exists (future-proof, ignore if fails)
   if (seo !== null) {
     try {
-      await query('update pages set seo=$2 where id=$1', [id, seo as any])
+      await query('update pages set seo=$2 where id=$1', [id, seo])
     } catch {
       // ignore if column not present
     }

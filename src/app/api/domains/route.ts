@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
+import { safeJson } from '@/lib/api'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -17,9 +18,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const url = new URL(req.url)
   const legacyProjectSlug = url.searchParams.get('project') || ''
-  const body = await req.json().catch(() => ({} as any))
-  const projectId: string | undefined = body.projectId
-  const hostname: string | undefined = body.hostname || body.domain
+  const [body, jsonError] = await safeJson<Record<string, unknown>>(req)
+  if (jsonError) return jsonError
+  const projectId = body['projectId'] as string | undefined
+  const hostname = (body['hostname'] as string | undefined) || (body['domain'] as string | undefined)
 
   // Resolve project id
   let pid = projectId as string | undefined
