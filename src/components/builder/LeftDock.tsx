@@ -73,20 +73,26 @@ export default function LeftDock() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
-      const editorInstance = event.detail
-      setEditor(editorInstance)
+    const handleGjsReady = (event: CustomEvent<Editor>) => {
+      setEditor(event.detail)
     }
 
     // Listen for panel change events from GrapesJS
-    const handlePanelChange = (event: CustomEvent) => {
+    const handlePanelChange = (event: CustomEvent<{ panelId: string }>) => {
       if (event.detail.panelId) {
         setActivePanel(event.detail.panelId)
       }
     }
 
     // Listen for drawer show events
-    const handleShowDrawer = (event: CustomEvent) => {
+    const handleShowDrawer = (
+      event: CustomEvent<{
+        panelType: string
+        pagesElement?: HTMLElement
+        layersElement?: HTMLElement
+        panelElement?: HTMLElement
+      }>
+    ) => {
       const { panelType, pagesElement, layersElement, panelElement } = event.detail
       setDrawerContent({
         type: panelType,
