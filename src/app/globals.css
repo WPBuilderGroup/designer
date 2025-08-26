@@ -22,7 +22,12 @@
 body {
   background: #f8fafc; /* bg-slate-50 */
   color: var(--foreground);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Use the Geist font loaded via next/font with sensible fallbacks */
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+code, pre {
+  font-family: var(--font-mono), ui-monospace, monospace;
 }
 
 @tailwind base;
@@ -43,15 +48,10 @@ body {
 /* Prevent drag-and-drop blocking CSS resets */
 @layer base {
   * {
-    /* Ensure drag events work properly */
     -webkit-user-select: auto;
     -moz-user-select: auto;
     user-select: auto;
-
-    /* Allow touch events for mobile drag */
     touch-action: auto;
-
-    /* Ensure pointer events work */
     pointer-events: auto;
   }
 
@@ -60,13 +60,11 @@ body {
     height: 100%;
     margin: 0;
     padding: 0;
-    /* Prevent text selection during drag operations */
     -webkit-user-select: none;
     -moz-user-select: none;
     user-select: none;
   }
 
-  /* Allow text selection in inputs and contenteditable */
   input,
   textarea,
   [contenteditable="true"] {
@@ -78,7 +76,6 @@ body {
 
 /* GrapesJS specific fixes */
 @layer components {
-  /* Ensure GrapesJS containers have proper sizing */
   .gjs-editor {
     height: 100vh !important;
     width: 100% !important;
@@ -86,7 +83,6 @@ body {
     overflow: visible !important;
   }
 
-  /* Fix canvas container */
   .gjs-cv-canvas {
     background: #f8f9fa !important;
     position: relative !important;
@@ -94,7 +90,6 @@ body {
     pointer-events: auto !important;
   }
 
-  /* Ensure blocks are draggable */
   .gjs-block {
     cursor: grab !important;
     pointer-events: auto !important;
@@ -108,26 +103,22 @@ body {
     cursor: grabbing !important;
   }
 
-  /* Fix drag indicators */
   .gjs-dashed {
     outline: 2px dashed #4299e1 !important;
     outline-offset: -2px !important;
     pointer-events: none !important;
   }
 
-  /* Ensure sidebar doesn't block canvas */
   .gjs-pn-panels {
     z-index: 10 !important;
     pointer-events: auto !important;
   }
 
-  /* Fix blocks panel */
   .gjs-blocks-c {
     overflow-y: auto !important;
     max-height: calc(100vh - 100px) !important;
   }
 
-  /* Better visual feedback */
   .gjs-selected {
     outline: 2px solid #4299e1 !important;
     outline-offset: -2px !important;
@@ -139,19 +130,16 @@ body {
     opacity: 0.7 !important;
   }
 
-  /* Ensure no overlays block drag events */
   .gjs-toolbar,
   .gjs-toolbar-item {
     pointer-events: auto !important;
     z-index: 1000 !important;
   }
 
-  /* Fix component hover states */
   .gjs-comp-selected {
     pointer-events: auto !important;
   }
 
-  /* Ensure drag placeholder works */
   .gjs-drag-helper {
     pointer-events: none !important;
     z-index: 9999 !important;
