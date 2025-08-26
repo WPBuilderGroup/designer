@@ -190,6 +190,46 @@ export default function CanvasHost() {
           styleManager: { appendTo: '#styles-panel' },
         }); // <-- Add closing parenthesis and semicolon to complete grapesjs.init call
 
+        // …inside your CanvasHost component after editor is created
+// Make the editor visible to other components
+        ;(window as any).__gjs = editor
+        window.dispatchEvent(new CustomEvent('gjs:ready', { detail: { editor } }))
+
+        function renderInto(el: HTMLElement | null, view: any, label: string) {
+          if (!el || !view || !view.el) {
+            console.warn(`[GrapesJS] ${label} element not available`)
+            return
+          }
+          el.innerHTML = ''
+          el.appendChild(view.el)
+        }
+
+        function mountManagers(ed: any) {
+          // prefer the new API, fall back to the old
+          const SM = ed.StyleManager
+          const LM = ed.LayerManager || ed.Layers
+          const BM = ed.BlockManager
+          const AM = ed.AssetManager
+          const TM = ed.TraitManager
+
+          const stylesEl  = document.getElementById('gjs-styles')
+          const traitsEl  = document.getElementById('gjs-traits')
+          const layersEl  = document.getElementById('gjs-layers')
+          const blocksEl  = document.getElementById('gjs-blocks')
+          const assetsEl  = document.getElementById('gjs-assets')
+
+          // Always render views manually into real HTMLElements
+          if (SM)   renderInto(stylesEl, SM.render(),  'StyleManager')
+          if (TM)   renderInto(traitsEl, TM.render(),  'TraitManager')
+          if (LM)   renderInto(layersEl, LM.render(),  'LayerManager/Pages')
+          if (BM)   renderInto(blocksEl, BM.render(),  'BlockManager')
+          if (AM)   renderInto(assetsEl, AM.render(),  'AssetManager')
+        }
+
+// render on editor load and also when someone asks us to re-mount
+        editor.on('load', () => setTimeout(() => mountManagers(editor), 0))
+        window.addEventListener('gjs:mount-managers', () => mountManagers(editor))
+
         // Custom load initial data (safe JSON parsing)
         try {
           const data = await loadProject(urlLoad)

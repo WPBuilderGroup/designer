@@ -1,38 +1,43 @@
-'use client';
+'use client'
 
-import { useEffect, useRef } from 'react';
-import type { Editor } from 'grapesjs';
+import React, { useEffect, useState } from 'react'
 
-interface Props { editor?: Editor | null; }
+type Tab = 'styles' | 'props'
 
-export default function RightSidebar({ editor }: Props) {
-  const stylesRef = useRef<HTMLDivElement>(null);
-  const traitsRef = useRef<HTMLDivElement>(null);
+export default function RightSidebar() {
+  const [tab, setTab] = useState<Tab>('styles')
 
   useEffect(() => {
-    if (!editor) return;
-
-    const mount = (manager: any, host: HTMLDivElement | null) => {
-      if (!host || !manager?.render) return;
-      const v = manager.render();
-      const el = (v && 'el' in v) ? (v as any).el : v;
-      if (el instanceof HTMLElement) {
-        host.innerHTML = '';
-        host.appendChild(el);
-      }
-    };
-
-    const sm: any = (editor as any).Styles || (editor as any).StyleManager;
-    const tm: any = (editor as any).Traits || (editor as any).TraitManager;
-
-    mount(sm, stylesRef.current);
-    mount(tm, traitsRef.current);
-  }, [editor]);
+    // re-mount managers whenever we swap tabs (both are always present)
+    window.dispatchEvent(new Event('gjs:mount-managers'))
+  }, [tab])
 
   return (
-    <div className="p-2 space-y-4">
-      <div className="rounded border min-h-40" ref={stylesRef} />
-      <div className="rounded border min-h-40" ref={traitsRef} />
-    </div>
-  );
+      <aside className="h-full w-[340px] shrink-0 border-l bg-muted/20 overflow-hidden">
+        <div className="h-full flex flex-col">
+          <div className="border-b px-2">
+            <div className="flex">
+              <button
+                  className={`px-3 py-2 text-sm ${tab === 'styles' ? 'font-semibold' : 'opacity-70'}`}
+                  onClick={() => setTab('styles')}
+              >
+                Styles
+              </button>
+              <button
+                  className={`px-3 py-2 text-sm ${tab === 'props' ? 'font-semibold' : 'opacity-70'}`}
+                  onClick={() => setTab('props')}
+              >
+                Properties
+              </button>
+            </div>
+          </div>
+
+          {/* Both containers always exist; we just hide the inactive one */}
+          <div className="flex-1 min-h-0">
+            <div id="gjs-styles" className={`h-full overflow-auto px-2 ${tab !== 'styles' ? 'hidden' : ''}`} />
+            <div id="gjs-traits" className={`h-full overflow-auto px-2 ${tab !== 'props' ? 'hidden' : ''}`} />
+          </div>
+        </div>
+      </aside>
+  )
 }

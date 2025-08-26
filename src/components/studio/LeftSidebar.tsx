@@ -1,42 +1,34 @@
-'use client';
+'use client'
 
-import { useEffect, useRef } from 'react';
-import type { Editor } from 'grapesjs';
+import React, { useEffect } from 'react'
 
-interface Props { editor?: Editor | null; }
-
-export default function LeftSidebar({ editor }: Props) {
-  const layersRef = useRef<HTMLDivElement>(null);
-  const blocksRef = useRef<HTMLDivElement>(null);
-  const assetsRef = useRef<HTMLDivElement>(null);
-
+export default function LeftSidebar() {
+  // Ask CanvasHost to (re)mount when this sidebar renders
   useEffect(() => {
-    if (!editor) return;
-
-    const mount = (manager: any, host: HTMLDivElement | null) => {
-      if (!host || !manager?.render) return;
-      const v = manager.render();
-      const el = (v && 'el' in v) ? (v as any).el : v;
-      if (el instanceof HTMLElement) {
-        host.innerHTML = '';
-        host.appendChild(el);
-      }
-    };
-
-    const lm: any = (editor as any).Layers || (editor as any).LayerManager;
-    const bm: any = (editor as any).Blocks || (editor as any).BlockManager;
-    const am: any = (editor as any).Assets || (editor as any).AssetManager;
-
-    mount(lm, layersRef.current);
-    mount(bm, blocksRef.current);
-    mount(am, assetsRef.current);
-  }, [editor]);
+    window.dispatchEvent(new Event('gjs:mount-managers'))
+  }, [])
 
   return (
-    <div className="p-2 space-y-4">
-      <div className="rounded border min-h-40" ref={layersRef} />
-      <div className="rounded border min-h-40" ref={blocksRef} />
-      <div className="rounded border min-h-40" ref={assetsRef} />
-    </div>
-  );
+      <aside className="h-full w-[300px] shrink-0 border-r bg-muted/20 overflow-hidden">
+        <div className="h-full flex flex-col">
+          {/* Pages & Layers */}
+          <div className="flex-1 min-h-0">
+            <div className="px-3 py-2 text-xs font-semibold uppercase opacity-70">Layers / Pages</div>
+            <div id="gjs-layers" className="h-[280px] overflow-auto px-2" />
+          </div>
+
+          {/* Blocks */}
+          <div className="flex-1 min-h-0 border-t">
+            <div className="px-3 py-2 text-xs font-semibold uppercase opacity-70">Blocks</div>
+            <div id="gjs-blocks" className="h-full overflow-auto px-2 pb-2" />
+          </div>
+
+          {/* Assets */}
+          <div className="min-h-[220px] border-t">
+            <div className="px-3 py-2 text-xs font-semibold uppercase opacity-70">Assets</div>
+            <div id="gjs-assets" className="h-[200px] overflow-auto px-2 pb-2" />
+          </div>
+        </div>
+      </aside>
+  )
 }
