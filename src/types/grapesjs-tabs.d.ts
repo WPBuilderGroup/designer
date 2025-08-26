@@ -1,5 +1,5 @@
 declare module 'grapesjs-tabs' {
-  const plugin: any;
+  const plugin: unknown;
   export default plugin;
 }
 

@@ -3,6 +3,9 @@
  * Registers custom block categories and components for the visual editor
  */
 
+import { logger } from '@/lib/logger'
+import type { Editor } from 'grapesjs'
+
 /**
  * Block categories configuration
  */
@@ -24,7 +27,15 @@ export const blockCategories = [
 /**
  * Custom blocks configuration
  */
-export const customBlocks = [
+export interface CustomBlock {
+  id: string
+  label: string
+  category: string
+  media: string
+  content: string
+}
+
+export const customBlocks: CustomBlock[] = [
   // Basic Category
   {
     id: 'heading-custom',
@@ -345,7 +356,7 @@ export const blocksToRemove = [
  * Register custom blocks and configure the Block Manager
  * @param editor - The GrapesJS editor instance
  */
-export function registerBlocks(editor: any): void {
+export function registerBlocks(editor: Editor): void {
   if (!editor) {
     console.warn('Editor instance not provided to registerBlocks')
     return
@@ -360,19 +371,19 @@ export function registerBlocks(editor: any): void {
     }
 
     // Remove duplicate blocks from preset
-    blocksToRemove.forEach((blockId: string) => {
-      try {
-        blockManager.remove?.(blockId)
-      } catch (e) {
-        // Ignore errors when removing non-existent blocks
-      }
-    })
+      blocksToRemove.forEach((blockId: string) => {
+        try {
+          blockManager.remove?.(blockId)
+        } catch {
+          // Ignore errors when removing non-existent blocks
+        }
+      })
 
     // Don't manually create categories - let them be created automatically with blocks
     // Categories will be created automatically when blocks are added with category property
 
-    // Add custom blocks - categories will be created automatically
-    customBlocks.forEach((block: any) => {
+      // Add custom blocks - categories will be created automatically
+      customBlocks.forEach((block: CustomBlock) => {
       try {
         blockManager.add(block.id, {
           label: block.label,
@@ -385,13 +396,11 @@ export function registerBlocks(editor: any): void {
       }
     })
 
-    console.log('Custom blocks registered successfully')
+    logger.info('Custom blocks registered successfully')
   } catch (error) {
     console.error('Failed to register custom blocks:', error)
   }
 }
-
-import type { Editor } from 'grapesjs'
 
 export function registerBasicBlocks(editor: Editor) {
   const bm = editor.BlockManager

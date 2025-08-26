@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { logger } from '@/lib/logger'
 
 // Helper to safely get StyleManager element after editor loaded
 function resolveStyleEl(ed?: any): HTMLElement | null {
@@ -63,7 +65,7 @@ export default function RightInspector() {
         stylesContainer.innerHTML = '';
         if (smEl) {
           stylesContainer.appendChild(smEl);
-          console.log('Style Manager mounted');
+          logger.info('Style Manager mounted');
         } else {
           console.warn('[GrapesJS] StyleManager element not available');
         }
@@ -78,7 +80,7 @@ export default function RightInspector() {
         propertiesContainer.innerHTML = '';
         if (tmEl instanceof HTMLElement) {
           propertiesContainer.appendChild(tmEl);
-          console.log('Trait Manager mounted');
+          logger.info('Trait Manager mounted');
         } else {
           console.warn('[GrapesJS] TraitManager element not available');
         }

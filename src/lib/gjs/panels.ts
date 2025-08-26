@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Editor } from 'grapesjs'
+import { logger } from '@/lib/logger'
 /**
  * GrapesJS Panels and Commands configuration
  * Configures topbar buttons and their corresponding commands
@@ -220,7 +221,7 @@ export function applyPanels(editor: any): void {
       window.dispatchEvent(new CustomEvent('gjs-history-change'))
     })
 
-    console.log('Panels and commands configured successfully')
+    logger.info('Panels and commands configured successfully')
   } catch (error) {
     console.error('Failed to apply panels configuration:', error)
   }

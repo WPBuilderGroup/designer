@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, type QueryParam } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -7,15 +7,21 @@ export async function GET(req: NextRequest) {
   const tag = (url.searchParams.get('tag') || '').trim()
 
   const clauses: string[] = []
-  const params: any[] = []
+  const params: QueryParam[] = []
   if (q) { params.push(`%${q.toLowerCase()}%`); clauses.push(`lower(name) like $${params.length}`) }
   if (tag) { params.push(tag); clauses.push(`(meta->'tags')::jsonb ? $${params.length}`) }
 
   const where = clauses.length ? `where ${clauses.join(' and ')}` : ''
-  const { rows } = await query(
-    `select id, name, type, coalesce(meta->>'preview','') as preview from templates ${where} order by created_at desc`,
-    params
-  )
+    interface TemplateSummary {
+      id: string
+      name: string
+      type: string
+      preview: string
+    }
+    const { rows } = await query<TemplateSummary>(
+      `select id, name, type, coalesce(meta->>'preview','') as preview from templates ${where} order by created_at desc`,
+      params
+    )
   return NextResponse.json(rows)
 }
 

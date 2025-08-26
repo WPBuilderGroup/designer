@@ -3,8 +3,10 @@
 import React, { useEffect, useRef } from 'react';
 import grapesjs, { Editor } from 'grapesjs';
 // (tuỳ bạn có dùng preset nào, có thể giữ hoặc bỏ 2 dòng dưới)
-// @ts-ignore – một số preset chưa có type
+// @ts-expect-error – một số preset chưa có type
 import presetWebpage from 'grapesjs-preset-webpage';
+
+import { logger } from '@/lib/logger';
 
 type CanvasHostProps = {
   // có thể truyền thêm props nếu bạn đang dùng (projectId, pageId,…)
@@ -51,7 +53,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     // @ts-ignore
     window.__gjs = editor;
 
-    const log = (msg: string) => console.log(msg);
+      const log = (msg: string) => logger.info(msg);
 
     const mountManagers = () => {
       // BLOCKS

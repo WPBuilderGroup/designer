@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPagesByProject, createPage } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,11 +14,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`GET /api/pages - Loading pages for project: ${project}`)
+    logger.info(`GET /api/pages - Loading pages for project: ${project}`)
 
     const pages = await getPagesByProject(project)
 
-    console.log(`Found ${pages.length} pages for project: ${project}`)
+    logger.info(`Found ${pages.length} pages for project: ${project}`)
     return NextResponse.json({ pages })
 
   } catch (error) {
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`POST /api/pages - Creating page: ${slug} in project: ${project}`)
+    logger.info(`POST /api/pages - Creating page: ${slug} in project: ${project}`)
 
     const page = await createPage(project, slug)
 
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Page created successfully: ${page.slug}`)
+    logger.info(`Page created successfully: ${page.slug}`)
 
     return NextResponse.json({
       success: true,

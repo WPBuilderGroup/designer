@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from 'pg'
+import { logger } from '@/lib/logger'
 
 // Global connection pool
 let globalPool: Pool | null = null
@@ -25,14 +26,16 @@ export function getPool(): Pool {
       console.error('Unexpected error on idle client', err)
     })
 
-    console.log('Database pool initialized successfully')
+      logger.info('Database pool initialized successfully')
   }
 
   return globalPool
 }
 
 // Generic query function with proper error handling
-export async function query<T = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number }> {
+export type QueryParam = string | number | boolean | null | Date | Uint8Array
+
+export async function query<T = unknown>(text: string, params?: QueryParam[]): Promise<{ rows: T[]; rowCount: number }> {
   const pool = getPool()
   const client = await pool.connect()
   
@@ -42,7 +45,7 @@ export async function query<T = any>(text: string, params?: any[]): Promise<{ ro
     const duration = Date.now() - start
     
     if (process.env.NODE_ENV === 'development') {
-      console.log('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
+        logger.info('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
     }
     
     return {
@@ -93,19 +96,31 @@ export async function closePool(): Promise<void> {
   if (globalPool) {
     await globalPool.end()
     globalPool = null
-    console.log('Database pool closed')
+      logger.info('Database pool closed')
   }
 }
 
 // Types for our database schema
+export interface GrapesJSComponentData {
+  type: string
+  components?: GrapesJSComponentData[]
+  [key: string]: unknown
+}
+
+export interface GrapesJSStyleData {
+  selectors?: { name: string }[]
+  style?: Record<string, string | number>
+  [key: string]: unknown
+}
+
 export interface PageData {
   id: string
   project_id: string
   slug: string
   gjs_html?: string | null
   gjs_css?: string | null
-  gjs_components?: any
-  gjs_styles?: any
+  gjs_components?: GrapesJSComponentData[] | null
+  gjs_styles?: GrapesJSStyleData[] | null
   updated_at: string
 }
 
@@ -122,6 +137,10 @@ export interface Tenant {
   slug: string
   name: string
   created_at: string
+}
+
+export interface ProjectWithPageCount extends Project {
+  page_count: number
 }
 
 // Helper functions for GrapesJS data management
@@ -149,7 +168,7 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
     const pageResult = await query<PageData>(pageQuery, [projectId, pageSlug])
     
     if (pageResult.rows.length === 0) {
-      console.log(`Page not found: ${projectSlug}/${pageSlug}`)
+      logger.info(`Page not found: ${projectSlug}/${pageSlug}`)
       return null
     }
     
@@ -160,12 +179,18 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
   }
 }
 
-export async function upsertPageData(projectSlug: string, pageSlug: string, data: {
+export interface GrapesJSPageContent {
   'gjs-html'?: string
-  'gjs-css'?: string  
-  'gjs-components'?: any
-  'gjs-styles'?: any
-}): Promise<boolean> {
+  'gjs-css'?: string
+  'gjs-components'?: GrapesJSComponentData[]
+  'gjs-styles'?: GrapesJSStyleData[]
+}
+
+export async function upsertPageData(
+  projectSlug: string,
+  pageSlug: string,
+  data: GrapesJSPageContent
+): Promise<boolean> {
   try {
     return await transaction(async (client) => {
       // First get project by slug
@@ -204,7 +229,7 @@ export async function upsertPageData(projectSlug: string, pageSlug: string, data
         data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null
       ])
       
-      console.log(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
+        logger.info(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
       return result.rows.length > 0
     })
   } catch (error) {
@@ -213,7 +238,7 @@ export async function upsertPageData(projectSlug: string, pageSlug: string, data
   }
 }
 
-export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Project[]> {
+export async function getProjectsByWorkspace(workspaceSlug: string): Promise<ProjectWithPageCount[]> {
   try {
     const query_text = `
       SELECT p.id, p.tenant_id, p.slug, p.name, p.created_at,
@@ -225,16 +250,16 @@ export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Pro
       GROUP BY p.id, p.tenant_id, p.slug, p.name, p.created_at
       ORDER BY p.created_at DESC
     `
-    const result = await query<Project & { page_count: string }>(query_text, [workspaceSlug])
-    
-    return result.rows.map(row => ({
-      id: row.id,
-      tenant_id: row.tenant_id,
-      slug: row.slug,
-      name: row.name,
-      created_at: row.created_at,
-      page_count: parseInt(row.page_count) || 0
-    })) as any
+      const result = await query<Project & { page_count: string }>(query_text, [workspaceSlug])
+
+      return result.rows.map(row => ({
+        id: row.id,
+        tenant_id: row.tenant_id,
+        slug: row.slug,
+        name: row.name,
+        created_at: row.created_at,
+        page_count: parseInt(row.page_count) || 0
+      }))
   } catch (error) {
     console.error('Error getting projects by workspace:', error)
     throw error
@@ -243,12 +268,12 @@ export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Pro
 
 export async function createProject(workspaceSlug: string, projectSlug: string, projectName: string): Promise<Project | null> {
   try {
-    return await transaction(async (client) => {
-      // Get or create tenant
-      let tenantQuery = `
-        SELECT id FROM tenants WHERE slug = $1 LIMIT 1
-      `
-      let tenantResult = await client.query(tenantQuery, [workspaceSlug])
+      return await transaction(async (client) => {
+        // Get or create tenant
+        const tenantQuery = `
+          SELECT id FROM tenants WHERE slug = $1 LIMIT 1
+        `
+        const tenantResult = await client.query(tenantQuery, [workspaceSlug])
       
       let tenantId: string
       if (tenantResult.rows.length === 0) {
@@ -259,7 +284,7 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
         `
         const newTenantResult = await client.query(createTenantQuery, [workspaceSlug, workspaceSlug])
         tenantId = newTenantResult.rows[0].id
-        console.log(`Created new tenant: ${workspaceSlug}`)
+        logger.info(`Created new tenant: ${workspaceSlug}`)
       } else {
         tenantId = tenantResult.rows[0].id
       }
@@ -276,7 +301,7 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
         return null
       }
 
-      console.log(`Project created successfully: ${projectSlug}`)
+      logger.info(`Project created successfully: ${projectSlug}`)
       return projectResult.rows[0]
     })
   } catch (error) {
@@ -348,7 +373,7 @@ export async function createPage(projectSlug: string, pageSlug: string): Promise
         return null
       }
 
-      console.log(`Page created successfully: ${pageSlug}`)
+      logger.info(`Page created successfully: ${pageSlug}`)
       return pageResult.rows[0]
     })
   } catch (error) {
