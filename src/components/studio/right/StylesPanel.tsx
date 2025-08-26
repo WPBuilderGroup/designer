@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import type { ReactNode } from 'react'
 import {
   ChevronDown,
   ChevronRight,
@@ -60,7 +61,7 @@ export default function StylesPanel() {
     </button>
   )
 
-  const ControlGroup = ({ children }: { children: React.ReactNode }) => (
+  const ControlGroup = ({ children }: { children: ReactNode }) => (
     <div className="p-4 space-y-4 border-b border-border">
       {children}
     </div>
@@ -71,7 +72,7 @@ export default function StylesPanel() {
     children
   }: {
     label: string
-    children: React.ReactNode
+    children: ReactNode
   }) => (
     <div className="space-y-2">
       <label className="text-xs uppercase tracking-wide font-medium text-muted-foreground block">

@@ -1,9 +1,10 @@
+import type { ReactNode } from 'react'
 import AppShell from '@/components/AppShell'
 
 export default function StudioLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: ReactNode
 }) {
   return <AppShell>{children}</AppShell>
 }
