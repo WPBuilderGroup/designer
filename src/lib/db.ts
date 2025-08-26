@@ -1,61 +1,74 @@
+// lib/db.ts
 import { Pool, PoolClient } from 'pg'
+import { logger } from './logger'
 
-// Global connection pool
+declare global {
+  // eslint-disable-next-line no-var
+  var __PG_POOL__: Pool | undefined
+}
+
+// Global connection pool (dev-safe via globalThis)
 let globalPool: Pool | null = null
+
+function createPool(): Pool {
+  const connectionString = process.env.DATABASE_URL
+  if (!connectionString) {
+    throw new Error('DATABASE_URL environment variable is not set')
+  }
+
+  const pool = new Pool({
+    connectionString,
+    max: 20,
+    idleTimeoutMillis: 30_000,
+    connectionTimeoutMillis: 2_000,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+  })
+
+  pool.on('error', (err: unknown) => {
+    logger.error('Unexpected error on idle client', err)
+  })
+
+  logger.info('Database pool initialized successfully')
+  return pool
+}
 
 // Database connection configuration
 export function getPool(): Pool {
-  if (!globalPool) {
-    const connectionString = process.env.DATABASE_URL
-    
-    if (!connectionString) {
-      throw new Error('DATABASE_URL environment variable is not set')
+  if (globalPool) return globalPool
+
+  // Reuse across HMR in dev
+  if (process.env.NODE_ENV !== 'production') {
+    if (!global.__PG_POOL__) {
+      global.__PG_POOL__ = createPool()
     }
-
-    globalPool = new Pool({
-      connectionString,
-      max: 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    })
-
-    // Handle pool errors
-    globalPool.on('error', (err: unknown) => {
-      console.error('Unexpected error on idle client', err)
-    })
-
-    console.log('Database pool initialized successfully')
+    globalPool = global.__PG_POOL__
+  } else {
+    globalPool = createPool()
   }
 
-  return globalPool
+  return globalPool!
 }
 
 // Generic query function with proper error handling
-export async function query<T>(text: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number }> {
+export async function query<T>(
+  text: string,
+  params: unknown[] = []
+): Promise<{ rows: T[]; rowCount: number }> {
   const pool = getPool()
-  const client = await pool.connect()
-  
+  const start = Date.now()
   try {
-    const start = Date.now()
-    const result = await client.query(text, params)
+    const result = await pool.query<T>(text, params as any[])
     const duration = Date.now() - start
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
-    }
-    
+    logger.debug('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
     return {
       rows: result.rows,
-      rowCount: result.rowCount ?? 0
+      rowCount: result.rowCount ?? 0,
     }
   } catch (error) {
-    console.error('Database query error:', error)
-    console.error('Query:', text)
-    console.error('Params:', params)
+    logger.error('Database query error:', error)
+    logger.error('Query:', text)
+    logger.error('Params:', params)
     throw error
-  } finally {
-    client.release()
   }
 }
 
@@ -63,14 +76,17 @@ export async function query<T>(text: string, params?: unknown[]): Promise<{ rows
 export async function transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   const pool = getPool()
   const client = await pool.connect()
-  
   try {
     await client.query('BEGIN')
     const result = await callback(client)
     await client.query('COMMIT')
     return result
   } catch (error) {
-    await client.query('ROLLBACK')
+    try {
+      await client.query('ROLLBACK')
+    } catch (rollbackErr) {
+      logger.error('Error during transaction rollback:', rollbackErr)
+    }
     throw error
   } finally {
     client.release()
@@ -83,7 +99,7 @@ export async function healthCheck(): Promise<boolean> {
     await query('SELECT 1 as health_check')
     return true
   } catch (error) {
-    console.error('Database health check failed:', error)
+    logger.error('Database health check failed:', error)
     return false
   }
 }
@@ -92,8 +108,11 @@ export async function healthCheck(): Promise<boolean> {
 export async function closePool(): Promise<void> {
   if (globalPool) {
     await globalPool.end()
+    if (process.env.NODE_ENV !== 'production') {
+      global.__PG_POOL__ = undefined
+    }
     globalPool = null
-    console.log('Database pool closed')
+    logger.info('Database pool closed')
   }
 }
 
@@ -139,35 +158,32 @@ export interface Tenant {
 // Helper functions for GrapesJS data management
 export async function getPageData(projectSlug: string, pageSlug: string): Promise<PageData | null> {
   try {
-    // First get project by slug
-    const projectQuery = `
-      SELECT id FROM projects WHERE slug = $1 LIMIT 1
-    `
+    const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
     const projectResult = await query<{ id: string }>(projectQuery, [projectSlug])
-    
+
     if (projectResult.rows.length === 0) {
-      console.warn(`Project not found: ${projectSlug}`)
+      logger.warn(`Project not found: ${projectSlug}`)
       return null
     }
-    
+
     const projectId = projectResult.rows[0].id
-    
-    // Get page data
+
     const pageQuery = `
       SELECT id, project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at
       FROM pages 
       WHERE project_id = $1 AND slug = $2
+      LIMIT 1
     `
     const pageResult = await query<PageData>(pageQuery, [projectId, pageSlug])
-    
+
     if (pageResult.rows.length === 0) {
-      console.log(`Page not found: ${projectSlug}/${pageSlug}`)
+      logger.warn(`Page not found: ${projectSlug}/${pageSlug}`)
       return null
     }
-    
+
     return pageResult.rows[0]
   } catch (error) {
-    console.error('Error getting page data:', error)
+    logger.error('Error getting page data:', error)
     throw error
   }
 }
@@ -184,20 +200,16 @@ export async function upsertPageData(
 ): Promise<boolean> {
   try {
     return await transaction(async (client) => {
-      // First get project by slug
-      const projectQuery = `
-        SELECT id FROM projects WHERE slug = $1 LIMIT 1
-      `
-      const projectResult = await client.query(projectQuery, [projectSlug])
-      
+      const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
+      const projectResult = await client.query<{ id: string }>(projectQuery, [projectSlug])
+
       if (projectResult.rows.length === 0) {
-        console.warn(`Project not found: ${projectSlug}`)
+        logger.warn(`Project not found: ${projectSlug}`)
         return false
       }
-      
+
       const projectId = projectResult.rows[0].id
-      
-      // Upsert page data
+
       const upsertQuery = `
         INSERT INTO pages (project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -210,21 +222,20 @@ export async function upsertPageData(
           updated_at = NOW()
         RETURNING id
       `
-      
+
       const result = await client.query(upsertQuery, [
         projectId,
         pageSlug,
-        data['gjs-html'] || null,
-        data['gjs-css'] || null,
+        data['gjs-html'] ?? null,
+        data['gjs-css'] ?? null,
         data['gjs-components'] ? JSON.stringify(data['gjs-components']) : null,
-        data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null
+        data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null,
       ])
-      
-      console.log(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
+
       return result.rows.length > 0
     })
   } catch (error) {
-    console.error('Error upserting page data:', error)
+    logger.error('Error upserting page data:', error)
     throw error
   }
 }
@@ -253,23 +264,25 @@ export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Pro
       slug: row.slug,
       name: row.name,
       created_at: row.created_at,
-      page_count: Number.parseInt(row.page_count, 10) || 0
+      page_count: Number.parseInt(row.page_count, 10) || 0,
     }))
   } catch (error) {
-    console.error('Error getting projects by workspace:', error)
+    logger.error('Error getting projects by workspace:', error)
     throw error
   }
 }
 
-export async function createProject(workspaceSlug: string, projectSlug: string, projectName: string): Promise<Project | null> {
+export async function createProject(
+  workspaceSlug: string,
+  projectSlug: string,
+  projectName: string
+): Promise<Project | null> {
   try {
     return await transaction(async (client) => {
       // Get or create tenant
-      let tenantQuery = `
-        SELECT id FROM tenants WHERE slug = $1 LIMIT 1
-      `
-      let tenantResult = await client.query(tenantQuery, [workspaceSlug])
-      
+      const tenantQuery = `SELECT id FROM tenants WHERE slug = $1 LIMIT 1`
+      const tenantResult = await client.query<{ id: string }>(tenantQuery, [workspaceSlug])
+
       let tenantId: string
       if (tenantResult.rows.length === 0) {
         const createTenantQuery = `
@@ -277,9 +290,12 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
           VALUES ($1, $2, NOW()) 
           RETURNING id
         `
-        const newTenantResult = await client.query(createTenantQuery, [workspaceSlug, workspaceSlug])
+        const newTenantResult = await client.query<{ id: string }>(createTenantQuery, [
+          workspaceSlug,
+          workspaceSlug,
+        ])
         tenantId = newTenantResult.rows[0].id
-        console.log(`Created new tenant: ${workspaceSlug}`)
+        logger.info(`Created new tenant: ${workspaceSlug}`)
       } else {
         tenantId = tenantResult.rows[0].id
       }
@@ -290,36 +306,36 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
         VALUES ($1, $2, $3, NOW())
         RETURNING id, tenant_id, slug, name, created_at
       `
-      const projectResult = await client.query(createProjectQuery, [tenantId, projectSlug, projectName])
-      
+      const projectResult = await client.query<Project>(createProjectQuery, [
+        tenantId,
+        projectSlug,
+        projectName,
+      ])
+
       if (projectResult.rows.length === 0) {
         return null
       }
 
-      console.log(`Project created successfully: ${projectSlug}`)
+      logger.info(`Project created successfully: ${projectSlug}`)
       return projectResult.rows[0]
     })
   } catch (error) {
-    console.error('Error creating project:', error)
+    logger.error('Error creating project:', error)
     throw error
   }
 }
 
-export async function getPagesByProject(projectSlug: string): Promise<PageData[]> {
+export async function getPagesByProject(projectSlug: string): Promise<(PageData & { has_content: boolean })[]> {
   try {
-    // Get project by slug
-    const projectQuery = `
-      SELECT id FROM projects WHERE slug = $1 LIMIT 1
-    `
+    const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
     const projectResult = await query<{ id: string }>(projectQuery, [projectSlug])
-    
+
     if (projectResult.rows.length === 0) {
       throw new Error(`Project not found: ${projectSlug}`)
     }
 
     const projectId = projectResult.rows[0].id
 
-    // Get pages for this project
     const pagesQuery = `
       SELECT id, project_id, slug, updated_at,
              CASE 
@@ -336,7 +352,7 @@ export async function getPagesByProject(projectSlug: string): Promise<PageData[]
 
     return pagesResult.rows
   } catch (error) {
-    console.error('Error getting pages by project:', error)
+    logger.error('Error getting pages by project:', error)
     throw error
   }
 }
@@ -344,35 +360,31 @@ export async function getPagesByProject(projectSlug: string): Promise<PageData[]
 export async function createPage(projectSlug: string, pageSlug: string): Promise<PageData | null> {
   try {
     return await transaction(async (client) => {
-      // Get project by slug
-      const projectQuery = `
-        SELECT id FROM projects WHERE slug = $1 LIMIT 1
-      `
-      const projectResult = await client.query(projectQuery, [projectSlug])
-      
+      const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
+      const projectResult = await client.query<{ id: string }>(projectQuery, [projectSlug])
+
       if (projectResult.rows.length === 0) {
         throw new Error(`Project not found: ${projectSlug}`)
       }
 
       const projectId = projectResult.rows[0].id
 
-      // Create page with empty content
       const createPageQuery = `
         INSERT INTO pages (project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at)
         VALUES ($1, $2, '', '', '[]', '[]', NOW())
         RETURNING id, project_id, slug, updated_at
       `
-      const pageResult = await client.query(createPageQuery, [projectId, pageSlug])
+      const pageResult = await client.query<PageData>(createPageQuery, [projectId, pageSlug])
 
       if (pageResult.rows.length === 0) {
         return null
       }
 
-      console.log(`Page created successfully: ${pageSlug}`)
+      logger.info(`Page created successfully: ${pageSlug}`)
       return pageResult.rows[0]
     })
   } catch (error) {
-    console.error('Error creating page:', error)
+    logger.error('Error creating page:', error)
     throw error
   }
 }

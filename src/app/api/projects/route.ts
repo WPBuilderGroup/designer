@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProjectsByWorkspace, createProject } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,15 +14,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`GET /api/projects - Loading projects for workspace: ${workspace}`)
+    logger.info(`GET /api/projects - Loading projects for workspace: ${workspace}`)
 
     const projects = await getProjectsByWorkspace(workspace)
 
-    console.log(`Found ${projects.length} projects for workspace: ${workspace}`)
     return NextResponse.json({ projects })
 
   } catch (error) {
-    console.error('Error in GET /api/projects:', error)
+    logger.error('Error in GET /api/projects:', error)
     return NextResponse.json(
       { 
         error: 'Internal server error',
@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`POST /api/projects - Creating project: ${slug} in workspace: ${workspace}`)
+    logger.info(`POST /api/projects - Creating project: ${slug} in workspace: ${workspace}`)
 
     const project = await createProject(workspace, slug, name)
 
@@ -73,8 +73,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log(`Project created successfully: ${project.slug}`)
 
     return NextResponse.json({
       success: true,
@@ -88,7 +86,7 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in POST /api/projects:', error)
+    logger.error('Error in POST /api/projects:', error)
     
     // Handle specific database errors
     if (error && typeof error === 'object' && 'code' in error) {
