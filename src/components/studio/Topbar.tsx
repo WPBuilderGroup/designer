@@ -1,48 +1,79 @@
 'use client'
 
-import React, { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { Monitor, Tablet, Smartphone, ChevronDown, Undo2, Redo2, Eye, Upload } from 'lucide-react'
 
-type DeviceName = 'Desktop' | 'Tablet' | 'Mobile'
+type DeviceType = 'Desktop' | 'Tablet' | 'Mobile'
+type TopbarProps = { onPublish?: () => void }
 
-export default function Topbar() {
-  const [editor, setEditor] = useState<any>(null)
-  const [device, setDevice] = useState<DeviceName>('Desktop')
+const DEVICES: { name: DeviceType; icon: React.ComponentType<{ size?: number }> }[] = [
+  { name: 'Desktop', icon: Monitor },
+  { name: 'Tablet', icon: Tablet },
+  { name: 'Mobile', icon: Smartphone },
+]
 
-  useEffect(() => {
-    const handler = (e: any) => setEditor(e.detail?.editor || (window as any).__gjs)
-    // capture editor if CanvasHost already fired
-    if ((window as any).__gjs) setEditor((window as any).__gjs)
-    window.addEventListener('gjs:ready', handler as any)
-    return () => window.removeEventListener('gjs:ready', handler as any)
-  }, [])
+export default function Topbar({ onPublish }: TopbarProps) {
+  const [selected, setSelected] = useState<DeviceType>('Desktop')
+  const DeviceIcon = useMemo(
+      () => DEVICES.find(d => d.name === selected)?.icon ?? Monitor,
+      [selected]
+  )
 
-  const devices: DeviceName[] = useMemo(() => ['Desktop', 'Tablet', 'Mobile'], [])
+  const emit = (name: string, detail: any = {}) => {
+    if (typeof window === 'undefined') return
+    window.dispatchEvent(new CustomEvent(name, { detail }))
+  }
 
-  useEffect(() => {
-    if (!editor) return
-    const DM = editor.DeviceManager || editor.Devices
-    if (DM?.setDevice) DM.setDevice(device)
-  }, [device, editor])
+  const handleDevice = (d: DeviceType) => {
+    setSelected(d)
+    emit('gjs:set-device', { name: d })
+  }
 
   return (
-      <header className="h-11 border-b bg-background px-3 flex items-center gap-2">
+      <div className="h-10 w-full border-b border-border bg-background px-3 flex items-center justify-between gap-3 select-none">
         <div className="flex items-center gap-1">
-          {devices.map(d => (
-              <button
-                  key={d}
-                  onClick={() => setDevice(d)}
-                  className={`px-2.5 py-1.5 text-sm rounded-md ${
-                      device === d ? 'bg-muted font-medium' : 'hover:bg-muted/60'
-                  }`}
-              >
-                {d}
-              </button>
-          ))}
+          <button className="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+                  onClick={() => emit('gjs:cmd', { name: 'core:undo' })} aria-label="Undo">
+            <Undo2 size={16} />
+          </button>
+          <button className="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+                  onClick={() => emit('gjs:cmd', { name: 'core:redo' })} aria-label="Redo">
+            <Redo2 size={16} />
+          </button>
+          <div className="w-px h-6 bg-border mx-2" />
+          <button className="rounded-md px-2.5 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted"
+                  onClick={() => emit('gjs:preview-toggle')} aria-label="Preview">
+            <Eye size={16} />
+          </button>
         </div>
 
-        <div className="ml-auto text-xs opacity-70">
-          {editor ? 'Editor ready' : 'Connecting…'}
+        <div className="relative">
+          <button
+              onClick={() => emit('gjs:toggle-device-menu')}
+              className="flex items-center gap-2 rounded-md px-2.5 py-1.5 text-sm bg-muted hover:bg-muted/80 font-medium text-foreground"
+          >
+            <DeviceIcon size={16} />
+            <span>{selected}</span>
+            <ChevronDown size={14} />
+          </button>
+          {/* hidden helper để IDE không phàn nàn; thay đổi device vẫn qua emit */}
+          <div className="hidden">
+            {DEVICES.map(d => (
+                <button key={d.name} onClick={() => handleDevice(d.name)} />
+            ))}
+          </div>
         </div>
-      </header>
+
+        <div className="flex items-center gap-2">
+          <button
+              className="rounded-md px-2.5 py-1.5 text-sm bg-primary text-primary-foreground hover:opacity-90"
+              onClick={() => (onPublish ? onPublish() : emit('gjs:publish'))}
+          >
+          <span className="inline-flex items-center gap-2">
+            <Upload size={16} /> Publish
+          </span>
+          </button>
+        </div>
+      </div>
   )
 }
