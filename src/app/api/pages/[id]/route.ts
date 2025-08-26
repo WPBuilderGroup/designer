@@ -1,12 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 
+interface SeoPayload {
+  title?: string
+  description?: string
+  [key: string]: unknown
+}
+
 // Update page by id with grapesJson and optional seo, return {page}
-export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
-  const { id } = await context.params
+export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const { id } = params
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
-  const g = (body['grapesJson'] || {}) as Record<string, unknown>
-  const seo: unknown = (body['seo'] ?? null)
+  const grapesJson = body['grapesJson']
+  const seoRaw = body['seo']
+
+  if (grapesJson !== undefined && (typeof grapesJson !== 'object' || grapesJson === null)) {
+    return NextResponse.json({ error: 'grapesJson must be an object' }, { status: 400 })
+  }
+
+  if (seoRaw !== undefined && seoRaw !== null && typeof seoRaw !== 'object') {
+    return NextResponse.json({ error: 'seo must be an object' }, { status: 400 })
+  }
+
+  const g = (grapesJson || {}) as Record<string, unknown>
+  const seo = (seoRaw ?? null) as SeoPayload | null
 
   const gHtml = (g['gjs-html'] as string) || ''
   const gCss = (g['gjs-css'] as string) || ''
@@ -27,7 +44,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Optional: update SEO if column exists (future-proof, ignore if fails)
   if (seo !== null) {
     try {
-      await query('update pages set seo=$2 where id=$1', [id, seo as any])
+      await query('update pages set seo=$2 where id=$1', [id, seo])
     } catch {
       // ignore if column not present
     }
