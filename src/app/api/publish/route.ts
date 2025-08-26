@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPageData } from '@/lib/db'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Publishing ${project}/${page}...`)
+    logger.info(`Publishing ${project}/${page}...`)
 
     // Get page data from database
     const pageData = await getPageData(project, page)
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       // Generate deployment URL
       const deploymentUrl = `/sites/${project}/${filename}`
 
-      console.log(`Published successfully: ${deploymentUrl}`)
+      logger.info(`Published successfully: ${deploymentUrl}`)
 
       return NextResponse.json({
         success: true,
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
         }
       })
     } catch (fsError) {
-      console.error('File system error:', fsError)
+      logger.error('File system error:', fsError)
       return NextResponse.json(
         { error: 'Failed to write published file' },
         { status: 500 }
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('Error in POST /api/publish:', error)
+    logger.error('Error in POST /api/publish:', error)
     return NextResponse.json(
       { 
         error: 'Failed to publish page',
@@ -164,17 +165,13 @@ function generateHTMLDocument(
     document.querySelectorAll('button, .btn').forEach(btn => {
       if (!btn.getAttribute('href') && !btn.getAttribute('onclick')) {
         btn.addEventListener('click', function() {
-          console.log('Button clicked:', this.textContent);
+          // No-op placeholder
         });
       }
     });
   </script>
   
   <!-- Analytics placeholder -->
-  <script>
-    console.log('Page loaded: ${pageTitle} - ${projectName}');
-    console.log('Published at: ${new Date().toISOString()}');
-  </script>
 </body>
 </html>`
 }

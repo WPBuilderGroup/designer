@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPagesByProject, createPage } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,15 +14,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`GET /api/pages - Loading pages for project: ${project}`)
+    logger.info(`GET /api/pages - Loading pages for project: ${project}`)
 
     const pages = await getPagesByProject(project)
 
-    console.log(`Found ${pages.length} pages for project: ${project}`)
     return NextResponse.json({ pages })
 
   } catch (error) {
-    console.error('Error in GET /api/pages:', error)
+    logger.error('Error in GET /api/pages:', error)
     
     if (error instanceof Error && error.message.includes('Project not found')) {
       return NextResponse.json(
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`POST /api/pages - Creating page: ${slug} in project: ${project}`)
+    logger.info(`POST /api/pages - Creating page: ${slug} in project: ${project}`)
 
     const page = await createPage(project, slug)
 
@@ -81,8 +81,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    console.log(`Page created successfully: ${page.slug}`)
 
     return NextResponse.json({
       success: true,
@@ -95,8 +93,8 @@ export async function POST(request: NextRequest) {
     })
 
   } catch (error) {
-    console.error('Error in POST /api/pages:', error)
-    
+    logger.error('Error in POST /api/pages:', error)
+  
     // Handle specific database errors
     if (error && typeof error === 'object' && 'code' in error) {
       if (error.code === '23505') { // Unique constraint violation
