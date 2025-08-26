@@ -7,7 +7,7 @@ export interface StyleSector {
   name: string
   open?: boolean
   buildProps?: string[]
-  properties?: any[]
+  properties?: unknown[]
 }
 
 /**
@@ -270,11 +270,14 @@ function toKebab(v?: string): string {
   return (v || '').toLowerCase().trim().replace(/\s+/g, '-');
 }
 
+import { GrapesJSEditor } from '@/types/grapesjs-editor'
+
 /**
  * Apply the style manager configuration to the GrapesJS editor
  * @param editor - The GrapesJS editor instance
  */
-export function applyStyleManager(editor: any): void {
+
+export function applyStyleManager(editor: GrapesJSEditor): void {
   if (!editor) {
     console.warn('Editor instance not provided to applyStyleManager')
     return
@@ -282,7 +285,7 @@ export function applyStyleManager(editor: any): void {
 
   try {
     // Get the Style Manager with fallback for different API versions
-    const sm = (editor as any).Styles || (editor as any).StyleManager
+    const sm = editor.Styles || editor.StyleManager
 
     if (!sm) {
       console.warn('Style Manager not found in editor - styles configuration skipped')
@@ -331,7 +334,7 @@ export function applyStyleManager(editor: any): void {
 
           // Add properties individually if they exist
           if (Array.isArray(props) && typeof sm.addProperty === 'function') {
-            props.forEach((prop: any) => {
+            props.forEach((prop: unknown) => {
               try {
                 if (typeof prop === 'string') {
                   // Simple property name (buildProps style)

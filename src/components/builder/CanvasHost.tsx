@@ -1,10 +1,10 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import grapesjs, { Editor } from 'grapesjs';
-// (tuỳ bạn có dùng preset nào, có thể giữ hoặc bỏ 2 dòng dưới)
-// @ts-ignore – một số preset chưa có type
+import grapesjs from 'grapesjs';
 import presetWebpage from 'grapesjs-preset-webpage';
+import logger from '@/lib/logger';
+import { GrapesJSEditor } from '@/types/grapesjs-editor';
 
 type CanvasHostProps = {
   // có thể truyền thêm props nếu bạn đang dùng (projectId, pageId,…)
@@ -20,13 +20,13 @@ export default function CanvasHost({ className }: CanvasHostProps) {
   const assetsRef = useRef<HTMLDivElement | null>(null);
   const stylesRef = useRef<HTMLDivElement | null>(null);
 
-  const editorRef = useRef<Editor | null>(null);
+  const editorRef = useRef<GrapesJSEditor | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     // Khởi tạo editor
-    const editor = grapesjs.init({
+    const editor: GrapesJSEditor = grapesjs.init({
       container: canvasRef.current,
       height: '100%',
       width: '100%',
@@ -51,18 +51,15 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     // @ts-ignore
     window.__gjs = editor;
 
-    const log = (msg: string) => console.log(msg);
-
-    const mountManagers = () => {
+    const mountManagers = (): void => {
       // BLOCKS
       try {
         const el = blocksRef.current;
         if (el) {
           el.innerHTML = '';
           const view = editor.BlockManager.render();
-          // @ts-ignore view.el tồn tại vì là Backbone view
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Block Manager mounted');
+          if (view && view.el) el.appendChild(view.el);
+          logger.info('[GrapesJS] Block Manager mounted');
         } else {
           console.warn('[GrapesJS] Blocks element not available');
         }
@@ -76,9 +73,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.LayerManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Layer Manager mounted');
+          if (view && view.el) el.appendChild(view.el);
+          logger.info('[GrapesJS] Layer Manager mounted');
         } else {
           console.warn('[GrapesJS] Layers element not available');
         }
@@ -92,11 +88,9 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           // Pages API mới – render() trả Backbone view giống các manager khác
-          // @ts-ignore
           const view = editor.Pages.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Pages Manager mounted');
+          if (view && view.el) el.appendChild(view.el);
+          logger.info('[GrapesJS] Pages Manager mounted');
         } else {
           console.warn('[GrapesJS] Pages element not available');
         }
@@ -110,9 +104,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.AssetManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Assets Manager mounted');
+          if (view && view.el) el.appendChild(view.el);
+          logger.info('[GrapesJS] Assets Manager mounted');
         } else {
           console.warn('[GrapesJS] Assets element not available');
         }
@@ -126,9 +119,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.StyleManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Style Manager mounted');
+          if (view && view.el) el.appendChild(view.el);
+          logger.info('[GrapesJS] Style Manager mounted');
         } else {
           console.warn('[GrapesJS] StyleManager element not available');
         }
@@ -139,7 +131,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
 
     // Chờ editor load xong rồi mount managers
     editor.on('load', () => {
-      log('GrapesJS editor initialized successfully');
+      logger.info('GrapesJS editor initialized successfully');
       // Đảm bảo DOM panels đã render
       requestAnimationFrame(mountManagers);
     });

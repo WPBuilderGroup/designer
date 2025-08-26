@@ -1,22 +1,24 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import logger from '@/lib/logger'
+import { GrapesJSEditor } from '@/types/grapesjs-editor'
 
 // Helper to safely get StyleManager element after editor loaded
-function resolveStyleEl(ed?: any): HTMLElement | null {
-  if (!ed) return null;
-  const sm: any = ed.StyleManager ?? ed.Styles;
-  if (!sm) return null;
-  const isLoaded = typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.();
-  if (!isLoaded) return null;
-  const view = typeof sm.getView === 'function' ? sm.getView() : undefined;
-  const el = view?.el ?? (typeof sm.render === 'function' ? sm.render().el : undefined);
-  return el instanceof HTMLElement ? el : null;
+function resolveStyleEl(ed?: GrapesJSEditor | null): HTMLElement | null {
+  if (!ed) return null
+  const sm = ed.StyleManager ?? ed.Styles
+  if (!sm) return null
+  const isLoaded = typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.()
+  if (!isLoaded) return null
+  const view = typeof sm.getView === 'function' ? sm.getView() : undefined
+  const el = view?.el ?? sm.render().el
+  return el instanceof HTMLElement ? el : null
 }
 
 export default function RightInspector() {
   const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles')
-  const [editor, setEditor] = useState<any>(null)
+  const [editor, setEditor] = useState<GrapesJSEditor | null>(null)
   const stylesContainerRef = useRef<HTMLDivElement>(null)
   const propertiesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -27,7 +29,7 @@ export default function RightInspector() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
+    const handleGjsReady = (event: CustomEvent<GrapesJSEditor>) => {
       const editorInstance = event.detail
       setEditor(editorInstance)
 
@@ -54,7 +56,7 @@ export default function RightInspector() {
     }
   }, [editor])
 
-  const mountManagers = (editorInstance: any) => {
+  const mountManagers = (editorInstance: GrapesJSEditor): void => {
     try {
       // Mount Style Manager
       const stylesContainer = stylesContainerRef.current;
@@ -62,8 +64,8 @@ export default function RightInspector() {
       if (stylesContainer) {
         stylesContainer.innerHTML = '';
         if (smEl) {
-          stylesContainer.appendChild(smEl);
-          console.log('Style Manager mounted');
+          stylesContainer.appendChild(smEl)
+          logger.info('Style Manager mounted')
         } else {
           console.warn('[GrapesJS] StyleManager element not available');
         }
@@ -72,13 +74,11 @@ export default function RightInspector() {
       // Mount Trait Manager (Properties)
       const propertiesContainer = propertiesContainerRef.current;
       if (propertiesContainer) {
-        const tm: any = editorInstance.TraitManager;
-        const tmView = tm?.render();
-        const tmEl = (tmView as any)?.el;
+        const tmEl = editorInstance.TraitManager.render().el
         propertiesContainer.innerHTML = '';
         if (tmEl instanceof HTMLElement) {
-          propertiesContainer.appendChild(tmEl);
-          console.log('Trait Manager mounted');
+          propertiesContainer.appendChild(tmEl)
+          logger.info('Trait Manager mounted')
         } else {
           console.warn('[GrapesJS] TraitManager element not available');
         }
@@ -94,7 +94,7 @@ export default function RightInspector() {
       })
 
     } catch (error) {
-      console.error('Failed to mount managers:', error)
+      logger.error('Failed to mount managers:', error)
     }
   }
 

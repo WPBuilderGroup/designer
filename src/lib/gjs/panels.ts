@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Editor } from 'grapesjs'
+import { GrapesJSEditor } from '@/types/grapesjs-editor'
 /**
  * GrapesJS Panels and Commands configuration
  * Configures topbar buttons and their corresponding commands
@@ -31,7 +32,7 @@ export const deviceConfigs = {
  * Configure panels and commands for the GrapesJS editor
  * @param editor - The GrapesJS editor instance
  */
-export function applyPanels(editor: any): void {
+export function applyPanels(editor: GrapesJSEditor): void {
   if (!editor) {
     console.warn('Editor instance not provided to applyPanels')
     return
@@ -48,7 +49,7 @@ export function applyPanels(editor: any): void {
 
     // Add device switching commands (updated for new device names)
     commands.add('set-device-desktop', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         editor.setDevice('Desktop')
         // Dispatch event for UI sync
         window.dispatchEvent(new CustomEvent('gjs-device-change', {
@@ -58,7 +59,7 @@ export function applyPanels(editor: any): void {
     })
 
     commands.add('set-device-tablet', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         editor.setDevice('Tablet')
         window.dispatchEvent(new CustomEvent('gjs-device-change', {
           detail: { device: 'tablet' }
@@ -67,7 +68,7 @@ export function applyPanels(editor: any): void {
     })
 
     commands.add('set-device-mobile', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         editor.setDevice('Mobile')
         window.dispatchEvent(new CustomEvent('gjs-device-change', {
           detail: { device: 'mobile' }
@@ -77,7 +78,7 @@ export function applyPanels(editor: any): void {
 
     // Enhanced preview command with event dispatch
     commands.add('preview', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         editor.runCommand('sw-visibility')
         window.dispatchEvent(new CustomEvent('gjs-preview-toggle', {
           detail: { isPreview: !editor.Canvas.getBody().classList.contains('gjs-dashed') }
@@ -87,7 +88,7 @@ export function applyPanels(editor: any): void {
 
     // Fullscreen command
     commands.add('fullscreen', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         const canvas = editor.Canvas.getElement() as HTMLElement & {
           webkitRequestFullscreen?: () => void
           msRequestFullscreen?: () => void
@@ -110,7 +111,7 @@ export function applyPanels(editor: any): void {
 
     // Clear canvas command
     commands.add('clear-canvas', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         if (confirm('Are you sure you want to clear the canvas? This action cannot be undone.')) {
           editor.setComponents('')
           editor.setStyle('')
@@ -120,14 +121,14 @@ export function applyPanels(editor: any): void {
 
     // Enhanced undo/redo commands with event dispatch
     commands.add('core:undo', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         editor.UndoManager.undo()
         window.dispatchEvent(new CustomEvent('gjs-history-change'))
       }
     })
 
     commands.add('core:redo', {
-      run: (editor: any) => {
+      run: (editor: GrapesJSEditor) => {
         editor.UndoManager.redo()
         window.dispatchEvent(new CustomEvent('gjs-history-change'))
       }
@@ -227,12 +228,16 @@ export function applyPanels(editor: any): void {
 }
 
 // 'use client' optional for modules used on the client
-function resolveViewEl(view: any): HTMLElement | null {
+function resolveViewEl(view: unknown): HTMLElement | null {
   if (!view) return null
-  if ((view as any).el) return (view as any).el
-  if (typeof (view as any).get === 'function') {
-    const v = (view as any).get('el')
-    if (v instanceof HTMLElement) return v
+  if (typeof view === 'object' && view !== null) {
+    const maybeEl = (view as { el?: unknown }).el
+    if (maybeEl instanceof HTMLElement) return maybeEl
+    const getter = (view as { get?: (key: string) => unknown }).get
+    if (typeof getter === 'function') {
+      const v = getter('el')
+      if (v instanceof HTMLElement) return v
+    }
   }
   return view instanceof HTMLElement ? view : null
 }
