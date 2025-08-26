@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, Tenant } from '@/lib/db'
 
 // Simple schema validation
 const tenantSchema = {
@@ -29,14 +29,16 @@ const tenantSchema = {
 
 export async function GET() {
   try {
-    const { rows } = await query('select id, slug, name from tenants order by created_at desc')
+    const { rows } = await query<Tenant>(
+      'select id, slug, name from tenants order by created_at desc'
+    )
     return NextResponse.json(rows)
   } catch (error) {
     console.error('Error fetching tenants:', error)
     return NextResponse.json(
       {
         error: 'Failed to load tenants',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
@@ -70,6 +72,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('Error creating tenant:', error)
 
+    // PostgreSQL unique_violation
     if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
       return NextResponse.json({ error: 'Tenant slug already exists' }, { status: 409 })
     }
@@ -77,7 +80,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         error: 'Failed to create tenant',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )

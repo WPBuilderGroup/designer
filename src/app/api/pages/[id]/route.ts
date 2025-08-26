@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, GjsComponent, GjsStyle } from '@/lib/db'
 
 interface SeoPayload {
   title?: string
@@ -27,8 +27,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const gHtml = (g['gjs-html'] as string) || ''
   const gCss = (g['gjs-css'] as string) || ''
-  const gComp = (g['gjs-components'] as object) || {}
-  const gStyles = (g['gjs-styles'] as object) || {}
+  const gComp = (g['gjs-components'] as GjsComponent[]) || []
+  const gStyles = (g['gjs-styles'] as GjsStyle[]) || []
 
   await query(
     `update pages set
@@ -50,6 +50,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
   }
 
-  const { rows } = await query('select id, slug as path, updated_at from pages where id=$1', [id])
+  const { rows } = await query<{ id: string; path: string; updated_at: string }>(
+    'select id, slug as path, updated_at from pages where id=$1',
+    [id]
+  )
   return NextResponse.json({ page: rows[0] })
 }
