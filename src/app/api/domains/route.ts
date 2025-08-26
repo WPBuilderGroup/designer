@@ -17,9 +17,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   const url = new URL(req.url)
   const legacyProjectSlug = url.searchParams.get('project') || ''
-  const body = await req.json().catch(() => ({} as any))
-  const projectId: string | undefined = body.projectId
-  const hostname: string | undefined = body.hostname || body.domain
+  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+  const projectId: string | undefined = body.projectId as string | undefined
+  const hostname: string | undefined =
+    (body.hostname as string | undefined) || (body.domain as string | undefined)
 
   // Resolve project id
   let pid = projectId as string | undefined

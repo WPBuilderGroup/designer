@@ -27,7 +27,7 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Optional: update SEO if column exists (future-proof, ignore if fails)
   if (seo !== null) {
     try {
-      await query('update pages set seo=$2 where id=$1', [id, seo as any])
+      await query('update pages set seo=$2 where id=$1', [id, seo])
     } catch {
       // ignore if column not present
     }
