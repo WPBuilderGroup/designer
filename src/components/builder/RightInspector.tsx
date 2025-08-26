@@ -1,22 +1,28 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import type {
+  GjsEditor,
+  GjsReadyDetail,
+  ManagerView,
+} from '@/types/gjs'
 
 // Helper to safely get StyleManager element after editor loaded
-function resolveStyleEl(ed?: any): HTMLElement | null {
-  if (!ed) return null;
-  const sm: any = ed.StyleManager ?? ed.Styles;
-  if (!sm) return null;
-  const isLoaded = typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.();
-  if (!isLoaded) return null;
-  const view = typeof sm.getView === 'function' ? sm.getView() : undefined;
-  const el = view?.el ?? (typeof sm.render === 'function' ? sm.render().el : undefined);
-  return el instanceof HTMLElement ? el : null;
+function resolveStyleEl(ed?: GjsEditor): HTMLElement | null {
+  if (!ed) return null
+  const sm = ed.StyleManager
+  const isLoaded =
+    typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.()
+  if (!isLoaded) return null
+  const view: ManagerView | undefined =
+    typeof sm.getView === 'function' ? sm.getView() : undefined
+  const el = view?.el ?? sm.render().el
+  return el instanceof HTMLElement ? el : null
 }
 
 export default function RightInspector() {
   const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles')
-  const [editor, setEditor] = useState<any>(null)
+  const [editor, setEditor] = useState<GjsEditor | null>(null)
   const stylesContainerRef = useRef<HTMLDivElement>(null)
   const propertiesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -27,8 +33,8 @@ export default function RightInspector() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
-      const editorInstance = event.detail
+    const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
+      const { editor: editorInstance } = event.detail
       setEditor(editorInstance)
 
       // Mount the style manager and trait manager after editor is ready
@@ -54,7 +60,7 @@ export default function RightInspector() {
     }
   }, [editor])
 
-  const mountManagers = (editorInstance: any) => {
+  const mountManagers = (editorInstance: GjsEditor) => {
     try {
       // Mount Style Manager
       const stylesContainer = stylesContainerRef.current;
@@ -72,9 +78,9 @@ export default function RightInspector() {
       // Mount Trait Manager (Properties)
       const propertiesContainer = propertiesContainerRef.current;
       if (propertiesContainer) {
-        const tm: any = editorInstance.TraitManager;
-        const tmView = tm?.render();
-        const tmEl = (tmView as any)?.el;
+        const tm = editorInstance.TraitManager
+        const tmView = tm.render()
+        const tmEl = tmView.el
         propertiesContainer.innerHTML = '';
         if (tmEl instanceof HTMLElement) {
           propertiesContainer.appendChild(tmEl);

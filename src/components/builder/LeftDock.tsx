@@ -1,13 +1,17 @@
 'use client'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { useState, useEffect } from 'react'
 import GlobalStylesPanel from './GlobalStylesPanel'
+import type {
+  GjsEditor,
+  GjsReadyDetail,
+  GjsPanelChangeDetail,
+  GjsShowDrawerDetail,
+} from '@/types/gjs'
 
 export default function LeftDock() {
   const [activePanel, setActivePanel] = useState<string>('pages-layers')
-  const [editor, setEditor] = useState<any>(null)
+  const [editor, setEditor] = useState<GjsEditor | null>(null)
   const [showDrawer, setShowDrawer] = useState<boolean>(false)
   const [showGlobalStyles, setShowGlobalStyles] = useState<boolean>(false)
   const [drawerContent, setDrawerContent] = useState<{
@@ -17,7 +21,15 @@ export default function LeftDock() {
     panelElement?: HTMLElement
   } | null>(null)
 
-  const dockItems = [
+  interface DockItem {
+    id: string
+    command: string
+    icon: JSX.Element
+    label: string
+    active: boolean
+  }
+
+  const dockItems: DockItem[] = [
     {
       id: 'pages-layers',
       command: 'open-pages-layers',
@@ -66,20 +78,20 @@ export default function LeftDock() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
-      const editorInstance = event.detail
+    const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
+      const { editor: editorInstance } = event.detail
       setEditor(editorInstance)
     }
 
     // Listen for panel change events from GrapesJS
-    const handlePanelChange = (event: CustomEvent) => {
+    const handlePanelChange = (event: CustomEvent<GjsPanelChangeDetail>) => {
       if (event.detail.panelId) {
         setActivePanel(event.detail.panelId)
       }
     }
 
     // Listen for drawer show events
-    const handleShowDrawer = (event: CustomEvent) => {
+    const handleShowDrawer = (event: CustomEvent<GjsShowDrawerDetail>) => {
       const { panelType, pagesElement, layersElement, panelElement } = event.detail
       setDrawerContent({
         type: panelType,
@@ -101,7 +113,7 @@ export default function LeftDock() {
     }
   }, [])
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item: DockItem) => {
     if (editor && item.command) {
       // Set active panel
       setActivePanel(item.id)
