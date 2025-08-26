@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Editor } from 'grapesjs'
 /**
  * GrapesJS Panels and Commands configuration
@@ -9,7 +8,7 @@ export interface PanelButton {
   id: string
   command?: string
   className?: string
-  attributes?: Record<string, any>
+  attributes?: Record<string, string>
   label?: string
 }
 
@@ -31,7 +30,7 @@ export const deviceConfigs = {
  * Configure panels and commands for the GrapesJS editor
  * @param editor - The GrapesJS editor instance
  */
-export function applyPanels(editor: any): void {
+export function applyPanels(editor: Editor): void {
   if (!editor) {
     console.warn('Editor instance not provided to applyPanels')
     return
@@ -48,7 +47,7 @@ export function applyPanels(editor: any): void {
 
     // Add device switching commands (updated for new device names)
     commands.add('set-device-desktop', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         editor.setDevice('Desktop')
         // Dispatch event for UI sync
         window.dispatchEvent(new CustomEvent('gjs-device-change', {
@@ -58,7 +57,7 @@ export function applyPanels(editor: any): void {
     })
 
     commands.add('set-device-tablet', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         editor.setDevice('Tablet')
         window.dispatchEvent(new CustomEvent('gjs-device-change', {
           detail: { device: 'tablet' }
@@ -67,7 +66,7 @@ export function applyPanels(editor: any): void {
     })
 
     commands.add('set-device-mobile', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         editor.setDevice('Mobile')
         window.dispatchEvent(new CustomEvent('gjs-device-change', {
           detail: { device: 'mobile' }
@@ -77,7 +76,7 @@ export function applyPanels(editor: any): void {
 
     // Enhanced preview command with event dispatch
     commands.add('preview', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         editor.runCommand('sw-visibility')
         window.dispatchEvent(new CustomEvent('gjs-preview-toggle', {
           detail: { isPreview: !editor.Canvas.getBody().classList.contains('gjs-dashed') }
@@ -87,7 +86,7 @@ export function applyPanels(editor: any): void {
 
     // Fullscreen command
     commands.add('fullscreen', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         const canvas = editor.Canvas.getElement() as HTMLElement & {
           webkitRequestFullscreen?: () => void
           msRequestFullscreen?: () => void
@@ -110,7 +109,7 @@ export function applyPanels(editor: any): void {
 
     // Clear canvas command
     commands.add('clear-canvas', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         if (confirm('Are you sure you want to clear the canvas? This action cannot be undone.')) {
           editor.setComponents('')
           editor.setStyle('')
@@ -120,14 +119,14 @@ export function applyPanels(editor: any): void {
 
     // Enhanced undo/redo commands with event dispatch
     commands.add('core:undo', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         editor.UndoManager.undo()
         window.dispatchEvent(new CustomEvent('gjs-history-change'))
       }
     })
 
     commands.add('core:redo', {
-      run: (editor: any) => {
+      run: (editor: Editor) => {
         editor.UndoManager.redo()
         window.dispatchEvent(new CustomEvent('gjs-history-change'))
       }
@@ -227,11 +226,19 @@ export function applyPanels(editor: any): void {
 }
 
 // 'use client' optional for modules used on the client
-function resolveViewEl(view: any): HTMLElement | null {
+interface ViewWithEl {
+  el?: HTMLElement
+}
+
+interface ViewWithGet {
+  get?: (prop: string) => unknown
+}
+
+function resolveViewEl(view: unknown): HTMLElement | null {
   if (!view) return null
-  if ((view as any).el) return (view as any).el
-  if (typeof (view as any).get === 'function') {
-    const v = (view as any).get('el')
+  if ((view as ViewWithEl).el) return (view as ViewWithEl).el ?? null
+  if (typeof (view as ViewWithGet).get === 'function') {
+    const v = (view as ViewWithGet).get?.('el')
     if (v instanceof HTMLElement) return v
   }
   return view instanceof HTMLElement ? view : null
@@ -243,7 +250,8 @@ function mountInViewsContainer(editor: Editor, el: HTMLElement) {
     pn.addPanel({ id: 'views-container', visible: true, content: '<div class="gjs-one-bg gjs-two-color" id="views-wrap" style="height:100%;overflow:auto"></div>' })
   }
   const panel = pn.getPanel('views-container')
-  const wrap = (panel as any)?.get('contentEl')?.querySelector('#views-wrap') as HTMLElement | null
+  const contentEl = (panel as unknown as { get?: (key: string) => unknown })?.get?.('contentEl') as HTMLElement | null
+  const wrap = contentEl?.querySelector('#views-wrap') as HTMLElement | null
   if (wrap) {
     wrap.innerHTML = ''
     wrap.appendChild(el)
@@ -254,7 +262,7 @@ export function registerViewCommands(editor: Editor) {
   // LAYERS
   editor.Commands.add('open-layers', {
     run(ed: Editor) {
-      const view = (ed as any).Layers?.render?.()
+      const view = (ed as unknown as { Layers?: { render?: () => unknown } }).Layers?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },
@@ -263,7 +271,7 @@ export function registerViewCommands(editor: Editor) {
   // BLOCKS
   editor.Commands.add('open-blocks', {
     run(ed: Editor) {
-      const view = (ed as any).Blocks?.render?.()
+      const view = (ed as unknown as { Blocks?: { render?: () => unknown } }).Blocks?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },
@@ -272,7 +280,7 @@ export function registerViewCommands(editor: Editor) {
   // ASSETS
   editor.Commands.add('open-assets', {
     run(ed: Editor) {
-      const view = (ed as any).Assets?.render?.()
+      const view = (ed as unknown as { Assets?: { render?: () => unknown } }).Assets?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },
@@ -281,7 +289,7 @@ export function registerViewCommands(editor: Editor) {
   // STYLES
   editor.Commands.add('open-styles', {
     run(ed: Editor) {
-      const view = (ed as any).Styles?.render?.()
+      const view = (ed as unknown as { Styles?: { render?: () => unknown } }).Styles?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },

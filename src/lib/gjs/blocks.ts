@@ -3,6 +3,8 @@
  * Registers custom block categories and components for the visual editor
  */
 
+import type { Editor } from 'grapesjs'
+
 /**
  * Block categories configuration
  */
@@ -24,7 +26,13 @@ export const blockCategories = [
 /**
  * Custom blocks configuration
  */
-export const customBlocks = [
+export const customBlocks: Array<{
+  id: string
+  label: string
+  category: string
+  media: string
+  content: unknown
+}> = [
   // Basic Category
   {
     id: 'heading-custom',
@@ -345,7 +353,7 @@ export const blocksToRemove = [
  * Register custom blocks and configure the Block Manager
  * @param editor - The GrapesJS editor instance
  */
-export function registerBlocks(editor: any): void {
+export function registerBlocks(editor: Editor): void {
   if (!editor) {
     console.warn('Editor instance not provided to registerBlocks')
     return
@@ -363,7 +371,7 @@ export function registerBlocks(editor: any): void {
     blocksToRemove.forEach((blockId: string) => {
       try {
         blockManager.remove?.(blockId)
-      } catch (e) {
+      } catch {
         // Ignore errors when removing non-existent blocks
       }
     })
@@ -372,7 +380,7 @@ export function registerBlocks(editor: any): void {
     // Categories will be created automatically when blocks are added with category property
 
     // Add custom blocks - categories will be created automatically
-    customBlocks.forEach((block: any) => {
+    customBlocks.forEach((block) => {
       try {
         blockManager.add(block.id, {
           label: block.label,
@@ -391,13 +399,10 @@ export function registerBlocks(editor: any): void {
   }
 }
 
-import type { Editor } from 'grapesjs'
-
 export function registerBasicBlocks(editor: Editor) {
   const bm = editor.BlockManager
   // Attempt to create/open the 'basic' category when supported (GrapesJS >= 0.21)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(bm as any).addCategory?.('basic', { label: 'Basic', open: true })
+  ;(bm as unknown as { addCategory?: (id: string, opts: { label: string; open: boolean }) => void }).addCategory?.('basic', { label: 'Basic', open: true })
 
   bm.add('section', {
     label: 'Section',
