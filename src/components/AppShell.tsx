@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { listWorkspaces, getWorkspace } from '../lib/store'
+import type { Workspace } from '../lib/types'
 import Button from './ui/Button'
 import Dropdown from './ui/Dropdown'
 
@@ -16,13 +17,10 @@ const CURRENT_WORKSPACE_KEY = 'currentWS'
 const AppShell = ({ children }: AppShellProps) => {
   const router = useRouter()
   const workspaces = listWorkspaces()
-  const [currentWorkspace, setCurrentWorkspace] = useState<any>(null) // Initialize as null to prevent hydration mismatch
-  const [isClient, setIsClient] = useState(false)
+  const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null) // Initialize as null to prevent hydration mismatch
 
   // Load current workspace from localStorage on mount
   useEffect(() => {
-    setIsClient(true) // Mark that we're now on the client
-
     const savedWorkspaceId = localStorage.getItem(CURRENT_WORKSPACE_KEY)
     if (savedWorkspaceId) {
       const workspace = getWorkspace(savedWorkspaceId)
@@ -44,7 +42,7 @@ const AppShell = ({ children }: AppShellProps) => {
   }, [workspaces])
 
   // Handle workspace selection
-  const handleWorkspaceSelect = (workspace: any) => {
+  const handleWorkspaceSelect = (workspace: Workspace) => {
     setCurrentWorkspace(workspace)
     localStorage.setItem(CURRENT_WORKSPACE_KEY, workspace.id)
     router.push('/projects') // Navigate to projects page to show updated workspace content
