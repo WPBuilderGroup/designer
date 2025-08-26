@@ -245,10 +245,10 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
   try {
     return await transaction(async (client) => {
       // Get or create tenant
-      let tenantQuery = `
+      const tenantQuery = `
         SELECT id FROM tenants WHERE slug = $1 LIMIT 1
-      `
-      let tenantResult = await client.query(tenantQuery, [workspaceSlug])
+      `;
+      const tenantResult = await client.query(tenantQuery, [workspaceSlug]);
       
       let tenantId: string
       if (tenantResult.rows.length === 0) {

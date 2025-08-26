@@ -396,7 +396,6 @@ import type { Editor } from 'grapesjs'
 export function registerBasicBlocks(editor: Editor) {
   const bm = editor.BlockManager
   // Attempt to create/open the 'basic' category when supported (GrapesJS >= 0.21)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(bm as any).addCategory?.('basic', { label: 'Basic', open: true })
 
   bm.add('section', {

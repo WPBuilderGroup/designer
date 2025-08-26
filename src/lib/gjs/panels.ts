@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import type { Editor } from 'grapesjs'
 /**
  * GrapesJS Panels and Commands configuration
