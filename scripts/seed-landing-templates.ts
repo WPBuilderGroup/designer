@@ -48,7 +48,15 @@ async function run() {
   for (const t of templates) {
     await pool.query(
         'insert into templates(name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta) values ($1,$2,$3,$4,$5,$6,$7)',
-        [t.name, 'page', t.html, t.css, {}, {}, { preview: t.preview }]
+        [
+          t.name,
+          'page',
+          t.html,
+          t.css,
+          JSON.stringify({}),
+          JSON.stringify({}),
+          JSON.stringify({ preview: t.preview })
+        ]
     )
   }
   console.log('Seeded templates:', templates.length)
