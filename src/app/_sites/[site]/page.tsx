@@ -1,4 +1,5 @@
 import { query } from '@/lib/db'
+import { sanitizeHtml, sanitizeCss } from '@/lib/sanitize.mjs'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,8 +11,10 @@ export default async function Site({ params }: { params: { site: string } }) {
     where p.slug=$1
     order by pub.created_at desc limit 1
   `, [site])
-  const html = rows[0]?.html || '<h1>Not published yet</h1>'
-  const css = rows[0]?.css || ''
+  const rawHtml = rows[0]?.html || '<h1>Not published yet</h1>'
+  const rawCss = rows[0]?.css || ''
+  const html = sanitizeHtml(rawHtml)
+  const css = sanitizeCss(rawCss)
 
   return (
     <html>

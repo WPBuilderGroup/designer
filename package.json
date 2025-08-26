@@ -7,7 +7,8 @@
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint",
-    "seed:templates": "tsx scripts/seed-landing-templates.ts"
+    "seed:templates": "tsx scripts/seed-landing-templates.ts",
+    "test": "node --test"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",
