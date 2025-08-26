@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, GjsComponent, GjsStyle } from '@/lib/db'
 
 // Update page by id with grapesJson and optional seo, return {page}
 export async function PUT(req: NextRequest, context: { params: Promise<{ id: string }> }) {
@@ -10,8 +10,8 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
 
   const gHtml = (g['gjs-html'] as string) || ''
   const gCss = (g['gjs-css'] as string) || ''
-  const gComp = (g['gjs-components'] as object) || {}
-  const gStyles = (g['gjs-styles'] as object) || {}
+  const gComp = (g['gjs-components'] as GjsComponent[]) || []
+  const gStyles = (g['gjs-styles'] as GjsStyle[]) || []
 
   await query(
     `update pages set
@@ -27,12 +27,15 @@ export async function PUT(req: NextRequest, context: { params: Promise<{ id: str
   // Optional: update SEO if column exists (future-proof, ignore if fails)
   if (seo !== null) {
     try {
-      await query('update pages set seo=$2 where id=$1', [id, seo as any])
+      await query('update pages set seo=$2 where id=$1', [id, seo])
     } catch {
       // ignore if column not present
     }
   }
 
-  const { rows } = await query('select id, slug as path, updated_at from pages where id=$1', [id])
+  const { rows } = await query<{ id: string; path: string; updated_at: string }>(
+    'select id, slug as path, updated_at from pages where id=$1',
+    [id]
+  )
   return NextResponse.json({ page: rows[0] })
 }

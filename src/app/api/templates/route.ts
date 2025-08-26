@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, GjsComponent, GjsStyle } from '@/lib/db'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const tag = (url.searchParams.get('tag') || '').trim()
 
   const clauses: string[] = []
-  const params: any[] = []
+  const params: unknown[] = []
   if (q) { params.push(`%${q.toLowerCase()}%`); clauses.push(`lower(name) like $${params.length}`) }
   if (tag) { params.push(tag); clauses.push(`(meta->'tags')::jsonb ? $${params.length}`) }
 
@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
   const g = grapesJson || {}
   const gHtml = (g['gjs-html'] as string) || ''
   const gCss = (g['gjs-css'] as string) || ''
-  const gComp = (g['gjs-components'] as object) || {}
-  const gStyles = (g['gjs-styles'] as object) || {}
+  const gComp = (g['gjs-components'] as GjsComponent[]) || []
+  const gStyles = (g['gjs-styles'] as GjsStyle[]) || []
 
   await query(
     `insert into templates(name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta)

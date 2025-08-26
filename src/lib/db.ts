@@ -21,7 +21,7 @@ export function getPool(): Pool {
     })
 
     // Handle pool errors
-    globalPool.on('error', (err) => {
+    globalPool.on('error', (err: unknown) => {
       console.error('Unexpected error on idle client', err)
     })
 
@@ -32,7 +32,7 @@ export function getPool(): Pool {
 }
 
 // Generic query function with proper error handling
-export async function query<T = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number }> {
+export async function query<T>(text: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number }> {
   const pool = getPool()
   const client = await pool.connect()
   
@@ -98,14 +98,26 @@ export async function closePool(): Promise<void> {
 }
 
 // Types for our database schema
+export interface GjsComponent {
+  type: string
+  components?: GjsComponent[]
+  [key: string]: unknown
+}
+
+export interface GjsStyle {
+  selectors: string[]
+  style: Record<string, unknown>
+  [key: string]: unknown
+}
+
 export interface PageData {
   id: string
   project_id: string
   slug: string
   gjs_html?: string | null
   gjs_css?: string | null
-  gjs_components?: any
-  gjs_styles?: any
+  gjs_components?: GjsComponent[] | null
+  gjs_styles?: GjsStyle[] | null
   updated_at: string
 }
 
@@ -160,12 +172,16 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
   }
 }
 
-export async function upsertPageData(projectSlug: string, pageSlug: string, data: {
-  'gjs-html'?: string
-  'gjs-css'?: string  
-  'gjs-components'?: any
-  'gjs-styles'?: any
-}): Promise<boolean> {
+export async function upsertPageData(
+  projectSlug: string,
+  pageSlug: string,
+  data: {
+    'gjs-html'?: string
+    'gjs-css'?: string
+    'gjs-components'?: GjsComponent[]
+    'gjs-styles'?: GjsStyle[]
+  }
+): Promise<boolean> {
   try {
     return await transaction(async (client) => {
       // First get project by slug
@@ -213,7 +229,11 @@ export async function upsertPageData(projectSlug: string, pageSlug: string, data
   }
 }
 
-export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Project[]> {
+export interface ProjectWithPageCount extends Project {
+  page_count: number
+}
+
+export async function getProjectsByWorkspace(workspaceSlug: string): Promise<ProjectWithPageCount[]> {
   try {
     const query_text = `
       SELECT p.id, p.tenant_id, p.slug, p.name, p.created_at,
@@ -226,15 +246,15 @@ export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Pro
       ORDER BY p.created_at DESC
     `
     const result = await query<Project & { page_count: string }>(query_text, [workspaceSlug])
-    
-    return result.rows.map(row => ({
+
+    return result.rows.map<ProjectWithPageCount>((row) => ({
       id: row.id,
       tenant_id: row.tenant_id,
       slug: row.slug,
       name: row.name,
       created_at: row.created_at,
-      page_count: parseInt(row.page_count) || 0
-    })) as any
+      page_count: Number.parseInt(row.page_count, 10) || 0
+    }))
   } catch (error) {
     console.error('Error getting projects by workspace:', error)
     throw error

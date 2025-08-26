@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import { query, Tenant } from '@/lib/db'
 
 export async function GET() {
-  const { rows } = await query('select id, slug, name from tenants order by created_at desc')
+  const { rows } = await query<Tenant>('select id, slug, name from tenants order by created_at desc')
   return NextResponse.json(rows)
 }
 
