@@ -1,15 +1,22 @@
 'use client'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
+import { useState, useEffect } from 'react';
+import GlobalStylesPanel from './GlobalStylesPanel';
+import type { GjsEditor, GjsReadyDetail } from '@/types/gjs';
 
-import { useState, useEffect } from 'react'
-import GlobalStylesPanel from './GlobalStylesPanel'
+interface DockItem {
+  id: string;
+  command?: string;
+  icon: JSX.Element;
+  label: string;
+  active: boolean;
+}
 
 export default function LeftDock() {
-  const [activePanel, setActivePanel] = useState<string>('pages-layers')
-  const [editor, setEditor] = useState<any>(null)
-  const [showDrawer, setShowDrawer] = useState<boolean>(false)
-  const [showGlobalStyles, setShowGlobalStyles] = useState<boolean>(false)
+  const [activePanel, setActivePanel] = useState<string>('pages-layers');
+  const [editor, setEditor] = useState<GjsEditor | null>(null);
+  const [showDrawer, setShowDrawer] = useState<boolean>(false);
+  const [showGlobalStyles, setShowGlobalStyles] = useState<boolean>(false);
   const [drawerContent, setDrawerContent] = useState<{
     type: string
     pagesElement?: HTMLElement
@@ -17,7 +24,7 @@ export default function LeftDock() {
     panelElement?: HTMLElement
   } | null>(null)
 
-  const dockItems = [
+  const dockItems: DockItem[] = [
     {
       id: 'pages-layers',
       command: 'open-pages-layers',
@@ -66,79 +73,88 @@ export default function LeftDock() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
-      const editorInstance = event.detail
-      setEditor(editorInstance)
-    }
+    const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
+      const { editor: editorInstance } = event.detail;
+      setEditor(editorInstance);
+    };
 
     // Listen for panel change events from GrapesJS
-    const handlePanelChange = (event: CustomEvent) => {
+    const handlePanelChange = (event: CustomEvent<{ panelId?: string }>) => {
       if (event.detail.panelId) {
-        setActivePanel(event.detail.panelId)
+        setActivePanel(event.detail.panelId);
       }
-    }
+    };
 
     // Listen for drawer show events
-    const handleShowDrawer = (event: CustomEvent) => {
-      const { panelType, pagesElement, layersElement, panelElement } = event.detail
+    const handleShowDrawer = (
+      event: CustomEvent<{
+        panelType: string;
+        pagesElement?: HTMLElement;
+        layersElement?: HTMLElement;
+        panelElement?: HTMLElement;
+      }>,
+    ) => {
+      const { panelType, pagesElement, layersElement, panelElement } = event.detail;
       setDrawerContent({
         type: panelType,
         pagesElement,
         layersElement,
-        panelElement
-      })
-      setShowDrawer(true)
-    }
+        panelElement,
+      });
+      setShowDrawer(true);
+    };
 
-    window.addEventListener('gjs-ready', handleGjsReady as EventListener)
-    window.addEventListener('gjs-panel-change', handlePanelChange as EventListener)
-    window.addEventListener('gjs-show-drawer', handleShowDrawer as EventListener)
+    window.addEventListener('gjs-ready', handleGjsReady as EventListener);
+    window.addEventListener('gjs-panel-change', handlePanelChange as EventListener);
+    window.addEventListener('gjs-show-drawer', handleShowDrawer as EventListener);
 
     return () => {
-      window.removeEventListener('gjs-ready', handleGjsReady as EventListener)
-      window.removeEventListener('gjs-panel-change', handlePanelChange as EventListener)
-      window.removeEventListener('gjs-show-drawer', handleShowDrawer as EventListener)
-    }
-  }, [])
+      window.removeEventListener('gjs-ready', handleGjsReady as EventListener);
+      window.removeEventListener('gjs-panel-change', handlePanelChange as EventListener);
+      window.removeEventListener('gjs-show-drawer', handleShowDrawer as EventListener);
+    };
+  }, []);
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item: DockItem) => {
     if (editor && item.command) {
       // Set active panel
-      setActivePanel(item.id)
+      setActivePanel(item.id);
 
       // Special handling for different panels
       if (item.id === 'pages-layers') {
-        setShowDrawer(!showDrawer)
-        setShowGlobalStyles(false)
+        setShowDrawer(!showDrawer);
+        setShowGlobalStyles(false);
         if (!showDrawer) {
-          editor.runCommand(item.command)
+          editor.runCommand(item.command);
         }
       } else if (item.id === 'global-styles') {
-        setShowGlobalStyles(!showGlobalStyles)
-        setShowDrawer(false)
+        setShowGlobalStyles(!showGlobalStyles);
+        setShowDrawer(false);
       } else {
         // Close all panels for other items
-        setShowDrawer(false)
-        setShowGlobalStyles(false)
-        editor.runCommand(item.command)
+        setShowDrawer(false);
+        setShowGlobalStyles(false);
+        editor.runCommand(item.command);
       }
 
       // Dispatch event for other components to sync
-      window.dispatchEvent(new CustomEvent('gjs-panel-change', {
-        detail: { panelId: item.id, command: item.command }
-      }))
+      window.dispatchEvent(
+        new CustomEvent('gjs-panel-change', {
+          detail: { panelId: item.id, command: item.command },
+        }),
+      );
     }
-  }
+  };
 
   const handleCloseDrawer = () => {
-    setShowDrawer(false)
-    setDrawerContent(null)
-  }
+    setShowDrawer(false);
+    setDrawerContent(null);
+  };
 
   const handleCloseGlobalStyles = () => {
-    setShowGlobalStyles(false)
-    setActivePanel('')
-  }
+    setShowGlobalStyles(false);
+    setActivePanel('');
+  };
 
   const renderDrawerContent = () => {
     if (!drawerContent) return null
