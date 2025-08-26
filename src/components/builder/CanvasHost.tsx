@@ -2,9 +2,26 @@
 
 import React, { useEffect, useRef } from 'react';
 import grapesjs, { Editor } from 'grapesjs';
-// (tuỳ bạn có dùng preset nào, có thể giữ hoặc bỏ 2 dòng dưới)
-// @ts-ignore – một số preset chưa có type
+import type { View } from 'backbone';
 import presetWebpage from 'grapesjs-preset-webpage';
+
+declare global {
+  interface Window {
+    __gjs?: Editor;
+  }
+}
+
+const isBackboneView = (
+  view: unknown
+): view is View<HTMLElement> =>
+  typeof view === 'object' &&
+  view !== null &&
+  'el' in view &&
+  (view as View<unknown>).el instanceof HTMLElement;
+
+const appendView = (el: HTMLElement, view: unknown) => {
+  if (isBackboneView(view)) el.appendChild(view.el);
+};
 
 type CanvasHostProps = {
   // có thể truyền thêm props nếu bạn đang dùng (projectId, pageId,…)
@@ -47,9 +64,9 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     });
 
     editorRef.current = editor;
-    // Expose để debug
-    // @ts-ignore
-    window.__gjs = editor;
+    if (process.env.NODE_ENV !== 'production') {
+      window.__gjs = editor;
+    }
 
     const log = (msg: string) => console.log(msg);
 
@@ -59,9 +76,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         const el = blocksRef.current;
         if (el) {
           el.innerHTML = '';
-          const view = editor.BlockManager.render();
-          // @ts-ignore view.el tồn tại vì là Backbone view
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          appendView(el, editor.BlockManager.render());
           log('[GrapesJS] Block Manager mounted');
         } else {
           console.warn('[GrapesJS] Blocks element not available');
@@ -75,9 +90,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         const el = layersRef.current;
         if (el) {
           el.innerHTML = '';
-          const view = editor.LayerManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          appendView(el, editor.LayerManager.render());
           log('[GrapesJS] Layer Manager mounted');
         } else {
           console.warn('[GrapesJS] Layers element not available');
@@ -91,11 +104,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         const el = pagesRef.current;
         if (el) {
           el.innerHTML = '';
-          // Pages API mới – render() trả Backbone view giống các manager khác
-          // @ts-ignore
-          const view = editor.Pages.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          appendView(el, editor.Pages.render());
           log('[GrapesJS] Pages Manager mounted');
         } else {
           console.warn('[GrapesJS] Pages element not available');
@@ -109,9 +118,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         const el = assetsRef.current;
         if (el) {
           el.innerHTML = '';
-          const view = editor.AssetManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          appendView(el, editor.AssetManager.render());
           log('[GrapesJS] Assets Manager mounted');
         } else {
           console.warn('[GrapesJS] Assets element not available');
@@ -125,9 +132,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         const el = stylesRef.current;
         if (el) {
           el.innerHTML = '';
-          const view = editor.StyleManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          appendView(el, editor.StyleManager.render());
           log('[GrapesJS] Style Manager mounted');
         } else {
           console.warn('[GrapesJS] StyleManager element not available');
@@ -149,8 +154,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         editor.destroy();
       } catch {}
       editorRef.current = null;
-      // @ts-ignore
-      if (window.__gjs === editor) delete window.__gjs;
+      if (process.env.NODE_ENV !== 'production' && window.__gjs === editor)
+        delete window.__gjs;
     };
   }, []);
 
