@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic'
 
 export default async function Site({ params }: { params: { site: string } }) {
   const site = params.site
-  const { rows } = await query(`
+  const { rows } = await query<{ html: string | null; css: string | null }>(`
     select pub.html, pub.css from publications pub
     join projects p on p.id = pub.project_id
     where p.slug=$1
