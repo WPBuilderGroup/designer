@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enums
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum DomainType {
+  APEX
+  SUB
+}
+
+enum DomainStatus {
+  PENDING
+  ACTIVE
+  ERROR
+}
+
+enum JobType {
+  PUBLISH
+  VERIFY_DOMAIN
+  SNAPSHOT
+}
+
+enum JobState {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// Core models
+model User {
+  id        String       @id @default(uuid()) @db.Uuid
+  email     String       @unique
+  name      String?
+  image     String?
+  createdAt DateTime     @default(now()) @map("created_at")
+  memberships Membership[]
+  @@map("users")
+}
+
+model Workspace { // maps to tenants
+  id        String       @id @default(uuid()) @db.Uuid
+  slug      String       @unique
+  name      String
+  createdAt DateTime     @default(now()) @map("created_at")
+  projects  Project[]
+  memberships Membership[]
+  subscriptions Subscription[]
+  usages     Usage[]
+  @@map("tenants")
+}
+
+model Membership {
+  userId      String   @db.Uuid
+  workspaceId String   @db.Uuid
+  role        Role
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([userId, workspaceId])
+  @@map("memberships")
+}
+
+model Project { // maps to projects
+  id          String         @id @default(uuid()) @db.Uuid
+  workspaceId String         @db.Uuid @map("tenant_id")
+  slug        String
+  name        String
+  status      ProjectStatus  @default(ACTIVE)
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  pages     Page[]
+  domains   Domain[]
+  publications Publication[]
+  publishTargets PublishTarget[]
+  jobs      Job[]
+
+  @@unique([workspaceId, slug])
+  @@map("projects")
+}
+
+model Page { // maps to pages
+  id            String  @id @default(uuid()) @db.Uuid
+  projectId     String  @db.Uuid @map("project_id")
+  path          String  @map("slug")
+  gjsHtml       String? @map("gjs_html")
+  gjsCss        String? @map("gjs_css")
+  gjsComponents Json?   @map("gjs_components")
+  gjsStyles     Json?   @map("gjs_styles")
+  seo           Json?   // future column
+  updatedAt     DateTime @default(now()) @map("updated_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, path])
+  @@map("pages")
+}
+
+model Template { // maps to templates
+  id            String   @id @default(uuid()) @db.Uuid
+  title         String   @map("name")
+  type          String   @default("page")
+  gjsHtml       String?  @map("gjs_html")
+  gjsCss        String?  @map("gjs_css")
+  gjsComponents Json?    @map("gjs_components")
+  gjsStyles     Json?    @map("gjs_styles")
+  meta          Json?    // contains preview, tags, etc.
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("templates")
+}
+
+model PublishTarget { // new
+  id                 String  @id @default(uuid()) @db.Uuid
+  projectId          String  @db.Uuid
+  vercelProjectId    String?
+  vercelDeploymentId String?
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("publish_targets")
+}
+
+model Domain { // maps to domains
+  id                 String        @id @default(uuid()) @db.Uuid
+  projectId          String        @db.Uuid @map("project_id")
+  hostname           String        @map("domain") @unique
+  type               DomainType?   // future column
+  status             DomainStatus  @default(PENDING)
+  verificationToken  String        @map("token")
+  verifiedAt         DateTime?     @map("verified_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@map("domains")
+}
+
+model Publication { // maps to publications
+  id        String   @id @default(uuid()) @db.Uuid
+  projectId String   @db.Uuid @map("project_id")
+  html      String?
+  css       String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  @@index([projectId])
+  @@map("publications")
+}
+
+// Billing & usage
+model Plan {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  features  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  subscriptions Subscription[]
+  @@map("plans")
+}
+
+model Subscription {
+  id           String    @id @default(uuid()) @db.Uuid
+  workspaceId  String    @db.Uuid
+  planId       String
+  status       String    @default("active")
+  startsAt     DateTime  @default(now()) @map("starts_at")
+  endsAt       DateTime? @map("ends_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  plan      Plan      @relation(fields: [planId], references: [id])
+
+  @@index([workspaceId])
+  @@index([planId])
+  @@map("subscriptions")
+}
+
+model Usage {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @db.Uuid
+  publishCount Int      @default(0) @map("publish_count")
+  trafficBytes BigInt   @default(0) @map("traffic_bytes")
+  assetBytes   BigInt   @default(0) @map("asset_bytes")
+  periodStart  DateTime @map("period_start")
+  periodEnd    DateTime @map("period_end")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, periodStart, periodEnd])
+  @@map("usage")
+}
+
+// Jobs & audit
+model Job {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String?  @db.Uuid
+  workspaceId String?  @db.Uuid
+  type        JobType
+  state       JobState @default(QUEUED)
+  payload     Json?
+  logs        Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project   Project?   @relation(fields: [projectId], references: [id])
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+
+  @@index([projectId])
+  @@index([workspaceId])
+  @@map("jobs")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String?  @db.Uuid
+  projectId   String?  @db.Uuid
+  userId      String?  @db.Uuid
+  action      String
+  metadata    Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  workspace Workspace? @relation(fields: [workspaceId], references: [id])
+  project   Project?   @relation(fields: [projectId], references: [id])
+  user      User?      @relation(fields: [userId], references: [id])
+
+  @@index([workspaceId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("audit_logs")
+}
+
