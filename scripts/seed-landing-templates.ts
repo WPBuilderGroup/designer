@@ -3,7 +3,7 @@ import * as dotenv from 'dotenv'
 import path from 'node:path'
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
 
-import { getPool } from '../src/lib/db'
+import { getPool, closePool } from '../src/lib/db'
 
 const previews = [
   '/demo/0b64e28e-8942-4ffe-8102-7cf7d491ca17.png',
@@ -52,7 +52,10 @@ async function run() {
     )
   }
   console.log('Seeded templates:', templates.length)
-  process.exit(0)
+  await closePool()
 }
 
-run().catch(e => { console.error(e); process.exit(1) })
+run().catch(async e => {
+  console.error(e)
+  await closePool()
+})
