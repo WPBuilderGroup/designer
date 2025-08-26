@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getPageData } from '@/lib/db'
 import { mkdir, writeFile } from 'fs/promises'
 import { join } from 'path'
+import { logger } from '@/lib/logger'
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Publishing ${project}/${page}...`)
+    logger.debug(`Publishing ${project}/${page}...`)
 
     // Get page data from database
     const pageData = await getPageData(project, page)
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
       // Generate deployment URL
       const deploymentUrl = `/sites/${project}/${filename}`
 
-      console.log(`Published successfully: ${deploymentUrl}`)
+      logger.debug(`Published successfully: ${deploymentUrl}`)
 
       return NextResponse.json({
         success: true,
@@ -164,7 +165,7 @@ function generateHTMLDocument(
     document.querySelectorAll('button, .btn').forEach(btn => {
       if (!btn.getAttribute('href') && !btn.getAttribute('onclick')) {
         btn.addEventListener('click', function() {
-          console.log('Button clicked:', this.textContent);
+          // Button clicked handler
         });
       }
     });
@@ -172,8 +173,7 @@ function generateHTMLDocument(
   
   <!-- Analytics placeholder -->
   <script>
-    console.log('Page loaded: ${pageTitle} - ${projectName}');
-    console.log('Published at: ${new Date().toISOString()}');
+    // Page analytics placeholder
   </script>
 </body>
 </html>`

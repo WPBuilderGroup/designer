@@ -30,6 +30,7 @@ import {
   Archive,
   User
 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 export default function BlocksPanel() {
   const blockCategories = [
@@ -89,7 +90,7 @@ export default function BlocksPanel() {
   ]
 
   const handleBlockClick = (blockId: string) => {
-    console.log('add block', blockId)
+    logger.debug('add block', blockId)
   }
 
   const handleKeyDown = (event: React.KeyboardEvent, blockId: string) => {

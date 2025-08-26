@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * GrapesJS Blocks configuration
  * Registers custom block categories and components for the visual editor
  */
+
+import { logger } from '../logger'
 
 /**
  * Block categories configuration
@@ -363,7 +366,7 @@ export function registerBlocks(editor: any): void {
     blocksToRemove.forEach((blockId: string) => {
       try {
         blockManager.remove?.(blockId)
-      } catch (e) {
+      } catch {
         // Ignore errors when removing non-existent blocks
       }
     })
@@ -385,7 +388,7 @@ export function registerBlocks(editor: any): void {
       }
     })
 
-    console.log('Custom blocks registered successfully')
+    logger.debug('Custom blocks registered successfully')
   } catch (error) {
     console.error('Failed to register custom blocks:', error)
   }
@@ -396,7 +399,6 @@ import type { Editor } from 'grapesjs'
 export function registerBasicBlocks(editor: Editor) {
   const bm = editor.BlockManager
   // Attempt to create/open the 'basic' category when supported (GrapesJS >= 0.21)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   ;(bm as any).addCategory?.('basic', { label: 'Basic', open: true })
 
   bm.add('section', {

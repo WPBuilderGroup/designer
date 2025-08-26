@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getProjectsByWorkspace, createProject } from '@/lib/db'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,11 +14,11 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`GET /api/projects - Loading projects for workspace: ${workspace}`)
+    logger.debug(`GET /api/projects - Loading projects for workspace: ${workspace}`)
 
     const projects = await getProjectsByWorkspace(workspace)
 
-    console.log(`Found ${projects.length} projects for workspace: ${workspace}`)
+    logger.debug(`Found ${projects.length} projects for workspace: ${workspace}`)
     return NextResponse.json({ projects })
 
   } catch (error) {
@@ -63,7 +64,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`POST /api/projects - Creating project: ${slug} in workspace: ${workspace}`)
+    logger.debug(`POST /api/projects - Creating project: ${slug} in workspace: ${workspace}`)
 
     const project = await createProject(workspace, slug, name)
 
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Project created successfully: ${project.slug}`)
+    logger.debug(`Project created successfully: ${project.slug}`)
 
     return NextResponse.json({
       success: true,

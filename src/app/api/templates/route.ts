@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const tag = (url.searchParams.get('tag') || '').trim()
 
   const clauses: string[] = []
-  const params: any[] = []
+  const params: unknown[] = []
   if (q) { params.push(`%${q.toLowerCase()}%`); clauses.push(`lower(name) like $${params.length}`) }
   if (tag) { params.push(tag); clauses.push(`(meta->'tags')::jsonb ? $${params.length}`) }
 

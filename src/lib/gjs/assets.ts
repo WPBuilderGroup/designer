@@ -1,7 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * GrapesJS Assets Manager configuration
  * Manages the media library and sample assets
  */
+
+import { logger } from '../logger'
 
 /**
  * Sample assets configuration
@@ -233,7 +236,7 @@ export function configureAssets(editor: any): void {
 
     // Configure asset manager behavior
     editor.on('asset:add', (asset: any) => {
-      console.log('Asset added:', asset.get('src'))
+      logger.debug('Asset added:', asset.get('src'))
     })
 
     // Configure drag and drop for assets
@@ -246,7 +249,7 @@ export function configureAssets(editor: any): void {
       // Handle file drops here if needed
     })
 
-    console.log('Assets Manager configured successfully')
+    logger.debug('Assets Manager configured successfully')
   } catch (error) {
     console.error('Failed to configure Assets Manager:', error)
   }

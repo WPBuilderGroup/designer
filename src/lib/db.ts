@@ -1,4 +1,5 @@
 import { Pool, PoolClient } from 'pg'
+import { logger } from './logger'
 
 // Global connection pool
 let globalPool: Pool | null = null
@@ -25,26 +26,24 @@ export function getPool(): Pool {
       console.error('Unexpected error on idle client', err)
     })
 
-    console.log('Database pool initialized successfully')
+    logger.debug('Database pool initialized successfully')
   }
 
   return globalPool
 }
 
 // Generic query function with proper error handling
-export async function query<T = any>(text: string, params?: any[]): Promise<{ rows: T[]; rowCount: number }> {
+export async function query<T>(text: string, params?: unknown[]): Promise<{ rows: T[]; rowCount: number }> {
   const pool = getPool()
   const client = await pool.connect()
-  
+
   try {
     const start = Date.now()
-    const result = await client.query(text, params)
+    const result = await client.query<T>(text, params)
     const duration = Date.now() - start
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
-    }
-    
+
+    logger.debug('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
+
     return {
       rows: result.rows,
       rowCount: result.rowCount ?? 0
@@ -93,19 +92,32 @@ export async function closePool(): Promise<void> {
   if (globalPool) {
     await globalPool.end()
     globalPool = null
-    console.log('Database pool closed')
+    logger.debug('Database pool closed')
   }
 }
 
 // Types for our database schema
+export interface GrapesComponent {
+  id?: string
+  type?: string
+  components?: GrapesComponent[]
+  [key: string]: unknown
+}
+
+export interface GrapesStyle {
+  selectors?: string[]
+  style?: Record<string, unknown>
+  [key: string]: unknown
+}
+
 export interface PageData {
   id: string
   project_id: string
   slug: string
   gjs_html?: string | null
   gjs_css?: string | null
-  gjs_components?: any
-  gjs_styles?: any
+  gjs_components?: GrapesComponent[] | null
+  gjs_styles?: GrapesStyle[] | null
   updated_at: string
 }
 
@@ -147,12 +159,12 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
       WHERE project_id = $1 AND slug = $2
     `
     const pageResult = await query<PageData>(pageQuery, [projectId, pageSlug])
-    
+
     if (pageResult.rows.length === 0) {
-      console.log(`Page not found: ${projectSlug}/${pageSlug}`)
+      logger.debug(`Page not found: ${projectSlug}/${pageSlug}`)
       return null
     }
-    
+
     return pageResult.rows[0]
   } catch (error) {
     console.error('Error getting page data:', error)
@@ -162,9 +174,9 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
 
 export async function upsertPageData(projectSlug: string, pageSlug: string, data: {
   'gjs-html'?: string
-  'gjs-css'?: string  
-  'gjs-components'?: any
-  'gjs-styles'?: any
+  'gjs-css'?: string
+  'gjs-components'?: GrapesComponent[]
+  'gjs-styles'?: GrapesStyle[]
 }): Promise<boolean> {
   try {
     return await transaction(async (client) => {
@@ -204,7 +216,7 @@ export async function upsertPageData(projectSlug: string, pageSlug: string, data
         data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null
       ])
       
-      console.log(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
+      logger.debug(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
       return result.rows.length > 0
     })
   } catch (error) {
@@ -213,7 +225,11 @@ export async function upsertPageData(projectSlug: string, pageSlug: string, data
   }
 }
 
-export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Project[]> {
+export interface ProjectWithCount extends Project {
+  page_count: number
+}
+
+export async function getProjectsByWorkspace(workspaceSlug: string): Promise<ProjectWithCount[]> {
   try {
     const query_text = `
       SELECT p.id, p.tenant_id, p.slug, p.name, p.created_at,
@@ -226,7 +242,7 @@ export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Pro
       ORDER BY p.created_at DESC
     `
     const result = await query<Project & { page_count: string }>(query_text, [workspaceSlug])
-    
+
     return result.rows.map(row => ({
       id: row.id,
       tenant_id: row.tenant_id,
@@ -234,7 +250,7 @@ export async function getProjectsByWorkspace(workspaceSlug: string): Promise<Pro
       name: row.name,
       created_at: row.created_at,
       page_count: parseInt(row.page_count) || 0
-    })) as any
+    }))
   } catch (error) {
     console.error('Error getting projects by workspace:', error)
     throw error
@@ -245,10 +261,10 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
   try {
     return await transaction(async (client) => {
       // Get or create tenant
-      let tenantQuery = `
+      const tenantQuery = `
         SELECT id FROM tenants WHERE slug = $1 LIMIT 1
       `
-      let tenantResult = await client.query(tenantQuery, [workspaceSlug])
+      const tenantResult = await client.query(tenantQuery, [workspaceSlug])
       
       let tenantId: string
       if (tenantResult.rows.length === 0) {
@@ -259,7 +275,7 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
         `
         const newTenantResult = await client.query(createTenantQuery, [workspaceSlug, workspaceSlug])
         tenantId = newTenantResult.rows[0].id
-        console.log(`Created new tenant: ${workspaceSlug}`)
+        logger.debug(`Created new tenant: ${workspaceSlug}`)
       } else {
         tenantId = tenantResult.rows[0].id
       }
@@ -276,7 +292,7 @@ export async function createProject(workspaceSlug: string, projectSlug: string, 
         return null
       }
 
-      console.log(`Project created successfully: ${projectSlug}`)
+      logger.debug(`Project created successfully: ${projectSlug}`)
       return projectResult.rows[0]
     })
   } catch (error) {
@@ -348,7 +364,7 @@ export async function createPage(projectSlug: string, pageSlug: string): Promise
         return null
       }
 
-      console.log(`Page created successfully: ${pageSlug}`)
+      logger.debug(`Page created successfully: ${pageSlug}`)
       return pageResult.rows[0]
     })
   } catch (error) {

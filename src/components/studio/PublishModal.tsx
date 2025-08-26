@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { X, ExternalLink, Copy, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
+import { logger } from '@/lib/logger'
 
 interface PublishModalProps {
   isOpen: boolean
@@ -37,7 +38,7 @@ export default function PublishModal({ isOpen, onClose }: PublishModalProps) {
     setPublishResult(null)
 
     try {
-      console.log(`Publishing ${project}/${page}...`)
+      logger.debug(`Publishing ${project}/${page}...`)
       
       const response = await fetch('/api/publish', {
         method: 'POST',
@@ -54,7 +55,7 @@ export default function PublishModal({ isOpen, onClose }: PublishModalProps) {
 
       if (response.ok) {
         setPublishResult(data)
-        console.log('Publish successful:', data.deploymentUrl)
+        logger.debug('Publish successful:', data.deploymentUrl)
       } else {
         setError(data.error || 'Failed to publish page')
       }

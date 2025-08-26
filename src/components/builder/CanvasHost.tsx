@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import grapesjs, { Editor } from 'grapesjs';
+import { logger } from '@/lib/logger';
 // (tuỳ bạn có dùng preset nào, có thể giữ hoặc bỏ 2 dòng dưới)
-// @ts-ignore – một số preset chưa có type
+// @ts-expect-error – preset lacks type definitions
 import presetWebpage from 'grapesjs-preset-webpage';
 
 type CanvasHostProps = {
@@ -48,10 +49,10 @@ export default function CanvasHost({ className }: CanvasHostProps) {
 
     editorRef.current = editor;
     // Expose để debug
-    // @ts-ignore
+    // @ts-expect-error Assign editor to window for debugging
     window.__gjs = editor;
 
-    const log = (msg: string) => console.log(msg);
+    const log = (msg: string) => logger.debug(msg);
 
     const mountManagers = () => {
       // BLOCKS
@@ -60,7 +61,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.BlockManager.render();
-          // @ts-ignore view.el tồn tại vì là Backbone view
+          // @ts-expect-error view.el exists on Backbone view
           if (view && view.el) el.appendChild(view.el as HTMLElement);
           log('[GrapesJS] Block Manager mounted');
         } else {
@@ -76,7 +77,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.LayerManager.render();
-          // @ts-ignore
+          // @ts-expect-error LayerManager returns a Backbone view
           if (view && view.el) el.appendChild(view.el as HTMLElement);
           log('[GrapesJS] Layer Manager mounted');
         } else {
@@ -92,9 +93,9 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           // Pages API mới – render() trả Backbone view giống các manager khác
-          // @ts-ignore
+          // @ts-expect-error Pages API typings are incomplete
           const view = editor.Pages.render();
-          // @ts-ignore
+          // @ts-expect-error Pages render returns Backbone view
           if (view && view.el) el.appendChild(view.el as HTMLElement);
           log('[GrapesJS] Pages Manager mounted');
         } else {
@@ -110,7 +111,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.AssetManager.render();
-          // @ts-ignore
+          // @ts-expect-error AssetManager returns Backbone view
           if (view && view.el) el.appendChild(view.el as HTMLElement);
           log('[GrapesJS] Assets Manager mounted');
         } else {
@@ -126,7 +127,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.StyleManager.render();
-          // @ts-ignore
+          // @ts-expect-error StyleManager returns Backbone view
           if (view && view.el) el.appendChild(view.el as HTMLElement);
           log('[GrapesJS] Style Manager mounted');
         } else {
@@ -149,7 +150,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         editor.destroy();
       } catch {}
       editorRef.current = null;
-      // @ts-ignore
+      // @ts-expect-error Cleanup debug reference
       if (window.__gjs === editor) delete window.__gjs;
     };
   }, []);

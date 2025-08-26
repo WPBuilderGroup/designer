@@ -1,13 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * GrapesJS Style Manager configuration
  * Organizes CSS properties into logical sectors similar to design tools
  */
+import { logger } from '../logger'
+
+export type StyleProperty = string | Record<string, unknown>
 
 export interface StyleSector {
   name: string
   open?: boolean
   buildProps?: string[]
-  properties?: any[]
+  properties?: StyleProperty[]
 }
 
 /**
@@ -299,12 +303,12 @@ export function applyStyleManager(editor: any): void {
     // Try the legacy addSectors method first (v0.1x)
     if (typeof sm.addSectors === 'function') {
       sm.addSectors(styleManagerConfig)
-      console.log('Style Manager configured successfully with addSectors (legacy API)')
+      logger.debug('Style Manager configured successfully with addSectors (legacy API)')
       return
     }
 
     // Fallback to individual sector addition for newer versions
-    console.log('Using fallback method for Style Manager configuration')
+    logger.debug('Using fallback method for Style Manager configuration')
 
     for (const sector of styleManagerConfig) {
       try {
@@ -331,7 +335,7 @@ export function applyStyleManager(editor: any): void {
 
           // Add properties individually if they exist
           if (Array.isArray(props) && typeof sm.addProperty === 'function') {
-            props.forEach((prop: any) => {
+            props.forEach((prop: StyleProperty) => {
               try {
                 if (typeof prop === 'string') {
                   // Simple property name (buildProps style)
@@ -351,7 +355,7 @@ export function applyStyleManager(editor: any): void {
       }
     }
 
-    console.log('Style Manager configured successfully with fallback method')
+    logger.debug('Style Manager configured successfully with fallback method')
   } catch (error) {
     console.error('Failed to apply Style Manager configuration:', error)
   }

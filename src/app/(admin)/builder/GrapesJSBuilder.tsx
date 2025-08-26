@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { logger } from '@/lib/logger'
 import grapesjs from 'grapesjs'
 import type { Editor } from 'grapesjs'
 import 'grapesjs/css/grapes.min.css'
@@ -141,7 +142,7 @@ export default function GrapesJSBuilder() {
     const urlStore = `/api/builder?project=${project}&page=${page}`
     const urlLoad = `/api/builder?project=${project}&page=${page}`
 
-    console.log('Initializing GrapesJS editor...')
+    logger.debug('Initializing GrapesJS editor...')
 
     try {
       const editorInstance = grapesjs.init({
@@ -302,7 +303,7 @@ export default function GrapesJSBuilder() {
 
       // Wait for editor to be fully initialized
       editorInstance.on('load', () => {
-        console.log('Editor loaded, configuring blocks...')
+        logger.debug('Editor loaded, configuring blocks...')
 
         // Open all block categories
         const blockManager = editorInstance.BlockManager
@@ -313,8 +314,8 @@ export default function GrapesJSBuilder() {
         // Add our custom blocks
         addCommonBlocks(editorInstance)
 
-        console.log('Available categories:', blockManager.getCategories().pluck('id'))
-        console.log('Available blocks:', blockManager.getAll().pluck('id'))
+        logger.debug('Available categories:', blockManager.getCategories().pluck('id'))
+        logger.debug('Available blocks:', blockManager.getAll().pluck('id'))
       })
 
       // Listen for storage:end:load event to properly handle content loading
@@ -324,7 +325,7 @@ export default function GrapesJSBuilder() {
           .then(r => r.ok ? r.json() : {})
           .then(data => {
             const gjsData: { 'gjs-html'?: string; 'gjs-css'?: string } = data;
-            console.log('Content loaded:', gjsData)
+            logger.debug('Content loaded:', gjsData)
 
             // Check if current editor content is empty
             const currentHtml = editorInstance.getHtml().trim()
@@ -334,7 +335,7 @@ export default function GrapesJSBuilder() {
             if (isEditorEmpty && gjsData['gjs-html']) {
               try {
                 editorInstance.setComponents(gjsData['gjs-html'])
-                console.log('Loaded saved HTML content')
+                logger.debug('Loaded saved HTML content')
               } catch (err) {
                 console.warn('Could not apply saved HTML content:', err)
               }
@@ -344,7 +345,7 @@ export default function GrapesJSBuilder() {
             if (gjsData['gjs-css']) {
               try {
                 editorInstance.setStyle(gjsData['gjs-css'])
-                console.log('Loaded saved CSS content')
+                logger.debug('Loaded saved CSS content')
               } catch (err) {
                 console.warn('Could not apply saved CSS content:', err)
               }
@@ -354,7 +355,7 @@ export default function GrapesJSBuilder() {
             if (isEditorEmpty && !gjsData['gjs-html']) {
               const fallbackContent = '<div style="padding: 40px; text-align: center;"><h1>Welcome to Designer Studio</h1><p>Start building your landing page by dragging blocks from the left panel</p></div>'
               editorInstance.setComponents(fallbackContent)
-              console.log('Set fallback content - no saved content found')
+              logger.debug('Set fallback content - no saved content found')
             }
           })
           .catch(err => {
@@ -377,14 +378,14 @@ export default function GrapesJSBuilder() {
               'gjs-components': JSON.stringify(editorInstance.getComponents()),
               'gjs-styles': JSON.stringify(editorInstance.getStyle())
             }
-            console.log('Saving content...')
+            logger.debug('Saving content...')
             const response = await fetch(urlStore, {
               method: 'POST',
               headers: { 'content-type': 'application/json' },
               body: JSON.stringify(payload)
             })
             if (response.ok) {
-              console.log('Content saved successfully')
+              logger.debug('Content saved successfully')
             }
           } catch (err) {
             console.warn('Save failed:', err)
@@ -397,7 +398,7 @@ export default function GrapesJSBuilder() {
 
       // Store editor instance
       setEditor(editorInstance)
-      console.log('Editor ready!')
+      logger.debug('Editor ready!')
 
     } catch (err) {
       console.error('Failed to initialize editor:', err)
