@@ -1,4 +1,5 @@
-import { Workspace, Project, ProjectStatus } from './types';
+import type { Workspace } from '@/types/workspace';
+import { Project, ProjectStatus } from './types';
 
 // Storage keys
 const STORAGE_KEY_WORKSPACES = 'designer-workspaces';
