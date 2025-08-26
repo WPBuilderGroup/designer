@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { GrapesJSEditor } from '@/types/grapesjs'
 import PublishModal from './PublishModal'
 
 export default function Topbar() {
@@ -8,7 +9,7 @@ export default function Topbar() {
   const [isPreview, setIsPreview] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
-  const [editor, setEditor] = useState<any>(null)
+  const [editor, setEditor] = useState<GrapesJSEditor | null>(null)
   const [showPublishModal, setShowPublishModal] = useState(false)
 
   const deviceSizes = [
@@ -19,7 +20,7 @@ export default function Topbar() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
+    const handleGjsReady = (event: CustomEvent<GrapesJSEditor>) => {
       const editorInstance = event.detail
       setEditor(editorInstance)
 
@@ -58,7 +59,7 @@ export default function Topbar() {
     }
   }, [editor])
 
-  const updateHistoryState = (editorInstance: any) => {
+  const updateHistoryState = (editorInstance: GrapesJSEditor) => {
     const undoManager = editorInstance.UndoManager
     setCanUndo(undoManager.hasUndo())
     setCanRedo(undoManager.hasRedo())

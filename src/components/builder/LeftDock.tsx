@@ -1,13 +1,12 @@
 'use client'
 
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import { useState, useEffect } from 'react'
 import GlobalStylesPanel from './GlobalStylesPanel'
+import type { GrapesJSEditor } from '@/types/grapesjs'
 
 export default function LeftDock() {
   const [activePanel, setActivePanel] = useState<string>('pages-layers')
-  const [editor, setEditor] = useState<any>(null)
+  const [editor, setEditor] = useState<GrapesJSEditor | null>(null)
   const [showDrawer, setShowDrawer] = useState<boolean>(false)
   const [showGlobalStyles, setShowGlobalStyles] = useState<boolean>(false)
   const [drawerContent, setDrawerContent] = useState<{
@@ -17,7 +16,15 @@ export default function LeftDock() {
     panelElement?: HTMLElement
   } | null>(null)
 
-  const dockItems = [
+  interface DockItem {
+    id: string
+    command: string
+    icon: JSX.Element
+    label: string
+    active: boolean
+  }
+
+  const dockItems: DockItem[] = [
     {
       id: 'pages-layers',
       command: 'open-pages-layers',
@@ -66,7 +73,7 @@ export default function LeftDock() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
+    const handleGjsReady = (event: CustomEvent<GrapesJSEditor>) => {
       const editorInstance = event.detail
       setEditor(editorInstance)
     }
@@ -101,7 +108,7 @@ export default function LeftDock() {
     }
   }, [])
 
-  const handleItemClick = (item: any) => {
+  const handleItemClick = (item: DockItem) => {
     if (editor && item.command) {
       // Set active panel
       setActivePanel(item.id)
