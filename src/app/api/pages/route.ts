@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPagesByProject, createPage } from '@/lib/db'
 import { safeJson } from '@/lib/api'
+import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,25 +15,23 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    console.log(`GET /api/pages - Loading pages for project: ${project}`)
+    logger.info(`GET /api/pages - Loading pages for project: ${project}`)
 
     const pages = await getPagesByProject(project)
 
-    console.log(`Found ${pages.length} pages for project: ${project}`)
     return NextResponse.json({ pages })
-
   } catch (error) {
-    console.error('Error in GET /api/pages:', error)
-    
+    logger.error('Error in GET /api/pages:', error)
+
     if (error instanceof Error && error.message.includes('Project not found')) {
       return NextResponse.json(
         { error: 'Project not found' },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
@@ -45,7 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const project = searchParams.get('project')
-    
+
     if (!project) {
       return NextResponse.json(
         { error: 'Missing required parameter: project' },
@@ -55,6 +54,7 @@ export async function POST(request: NextRequest) {
 
     const [body, jsonError] = await safeJson(request)
     if (jsonError) return jsonError
+
     const { slug } = body as { slug?: string }
 
     if (!slug) {
@@ -64,16 +64,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate slug format
     const slugRegex = /^[a-z0-9-]+$/
     if (!slugRegex.test(slug)) {
       return NextResponse.json(
-        { error: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.' },
+        {
+          error: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.'
+        },
         { status: 400 }
       )
     }
 
-    console.log(`POST /api/pages - Creating page: ${slug} in project: ${project}`)
+    logger.info(`POST /api/pages - Creating page: ${slug} in project: ${project}`)
 
     const page = await createPage(project, slug)
 
@@ -84,8 +85,6 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log(`Page created successfully: ${page.slug}`)
-
     return NextResponse.json({
       success: true,
       page: {
@@ -95,29 +94,25 @@ export async function POST(request: NextRequest) {
         has_content: false
       }
     })
+  } catch (error: any) {
+    logger.error('Error in POST /api/pages:', error)
 
-  } catch (error) {
-    console.error('Error in POST /api/pages:', error)
-    
-    // Handle specific database errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === '23505') { // Unique constraint violation
-        return NextResponse.json(
-          { error: 'Page slug already exists in this project' },
-          { status: 409 }
-        )
-      }
+    if (error?.code === '23505') {
+      return NextResponse.json(
+        { error: 'Page slug already exists in this project' },
+        { status: 409 }
+      )
     }
-    
+
     if (error instanceof Error && error.message.includes('Project not found')) {
       return NextResponse.json(
         { error: 'Project not found' },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
         message: error instanceof Error ? error.message : 'Unknown error'
       },
