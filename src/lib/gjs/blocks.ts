@@ -36,12 +36,17 @@ export interface CustomBlock extends BlockProperties {
 
 /**
  * Array of custom block definitions
- * ⚠️ NOTE: Tất cả các block đã được giữ nguyên nội dung như bạn gửi. Chèn lại nguyên vẹn nếu cần.
+ * ⚠️ NOTE: Bạn cần thêm lại customBlocks vào đây nếu có
  */
 export const customBlocks: CustomBlock[] = [
-  // 👉 Nơi bạn paste toàn bộ danh sách block đã định nghĩa (heading-custom, text-custom, button-custom,...)
-  // Vì code của bạn rất dài nên không paste lại, nhưng đảm bảo bạn chỉ cần:
-  // 👉 Copy nguyên phần customBlocks từ code đã có
+  // ✨ Ví dụ (hoặc paste lại toàn bộ custom block từ cấu hình của bạn)
+  // {
+  //   id: 'heading-custom',
+  //   label: 'Heading',
+  //   category: 'basic',
+  //   media: '<svg>...</svg>',
+  //   content: '<h1>Heading</h1>',
+  // },
 ]
 
 /**
@@ -113,6 +118,7 @@ export function registerBasicBlocks(editor: Editor) {
     add: (id: string, config: any) => void
   }
 
+  // Create/open the 'basic' category when supported (GrapesJS >= 0.21)
   bm.addCategory?.('basic', { label: 'Basic', open: true })
 
   bm.add('section', {
