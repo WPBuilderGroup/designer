@@ -8,6 +8,7 @@ const levelOrder: Record<LogLevel, number> = {
   error: 3,
 }
 
+// Thiết lập level hiện tại dựa vào môi trường
 const currentLevel: LogLevel =
   process.env.NODE_ENV === 'development' ? 'debug' : 'warn'
 
