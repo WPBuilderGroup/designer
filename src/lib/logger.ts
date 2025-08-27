@@ -8,7 +8,8 @@ const levelOrder: Record<LogLevel, number> = {
   error: 3,
 }
 
-const currentLevel: LogLevel = process.env.NODE_ENV === 'development' ? 'debug' : 'warn'
+const currentLevel: LogLevel =
+  process.env.NODE_ENV === 'development' ? 'debug' : 'warn'
 
 function log(level: LogLevel, message: string, meta?: LogMeta) {
   if (levelOrder[level] < levelOrder[currentLevel]) return
@@ -41,3 +42,5 @@ export const logger = {
   warn: (message: string, meta?: LogMeta) => log('warn', message, meta),
   error: (message: string, meta?: LogMeta) => log('error', message, meta),
 }
+
+export type Logger = typeof logger

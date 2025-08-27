@@ -4,21 +4,25 @@ import { useState, useEffect, useRef } from 'react'
 import type { GjsEditor, GjsReadyDetail } from '@/types/gjs'
 import { logger } from '@/lib/logger'
 
-/** Safely resolve the StyleManager element after the editor has loaded */
-function resolveStyleEl(ed?: GjsEditor): HTMLElement | null {
-  if (!ed) return null
-  // Some setups expose StyleManager as `Styles`
-  const sm: any = (ed as any).StyleManager ?? (ed as any).Styles
+/**
+ * Safely resolve the StyleManager's DOM element after GrapesJS editor has loaded
+ */
+function resolveStyleEl(editor?: GjsEditor): HTMLElement | null {
+  if (!editor) return null
+
+  const sm = (editor as any).StyleManager ?? (editor as any).Styles
   if (!sm) return null
 
   const isLoaded =
-    typeof (ed as any).isLoaded === 'function'
-      ? (ed as any).isLoaded()
-      : !!(ed as any).getModel?.()
+    typeof (editor as any).isLoaded === 'function'
+      ? (editor as any).isLoaded()
+      : !!(editor as any).getModel?.()
+
   if (!isLoaded) return null
 
   const view = typeof sm.getView === 'function' ? sm.getView() : sm.render?.()
   const el = view?.el ?? sm.render?.()?.el
+
   return el instanceof HTMLElement ? el : null
 }
 
@@ -34,14 +38,12 @@ export default function RightInspector() {
       const { editor: editorInstance } = event.detail
       setEditor(editorInstance)
 
-      // Mount managers slightly after ready to ensure views exist
       setTimeout(() => {
         mountManagers(editorInstance)
       }, 100)
     }
 
     const handleComponentSelect = () => {
-      // Refresh managers when component selection changes
       refreshManagers()
     }
 
@@ -52,45 +54,42 @@ export default function RightInspector() {
       window.removeEventListener('gjs-ready', handleGjsReady as EventListener)
       window.removeEventListener('gjs-component-select', handleComponentSelect)
     }
-    // Don't depend on `editor` here; we refresh via handlers
+    // `editor` intentionally excluded from deps; we access via closure
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const mountManagers = (editorInstance: GjsEditor) => {
     try {
-      // Style Manager
+      // Mount Style Manager
       const stylesContainer = stylesContainerRef.current
       const smEl = resolveStyleEl(editorInstance)
       if (stylesContainer) {
         stylesContainer.innerHTML = ''
         if (smEl) {
           stylesContainer.appendChild(smEl)
-          logger.info('[GrapesJS] Style Manager mounted')
+          logger.info('Style Manager mounted')
         } else {
-          logger.warn('[GrapesJS] StyleManager element not available')
+          logger.warn('StyleManager element not available')
         }
       }
 
-      // Trait Manager (Properties)
+      // Mount Trait Manager (Properties)
       const propertiesContainer = propertiesContainerRef.current
+      const tmEl = editorInstance.TraitManager?.render?.()?.el
+
       if (propertiesContainer) {
-        const tmEl = editorInstance.TraitManager?.render()?.el
         propertiesContainer.innerHTML = ''
         if (tmEl instanceof HTMLElement) {
           propertiesContainer.appendChild(tmEl)
-          logger.info('[GrapesJS] Trait Manager mounted')
+          logger.info('Trait Manager mounted')
         } else {
-          logger.warn('[GrapesJS] TraitManager element not available')
+          logger.warn('TraitManager element not available')
         }
       }
 
-      // Update managers on selection changes
-      editorInstance.on('component:selected', () => {
-        setTimeout(() => refreshManagers(), 50)
-      })
-      editorInstance.on('component:deselected', () => {
-        setTimeout(() => refreshManagers(), 50)
-      })
+      // Refresh managers on selection change
+      editorInstance.on('component:selected', () => setTimeout(refreshManagers, 50))
+      editorInstance.on('component:deselected', () => setTimeout(refreshManagers, 50))
     } catch (error) {
       logger.error('Failed to mount managers', {
         error: error instanceof Error ? error.message : String(error),
@@ -101,14 +100,8 @@ export default function RightInspector() {
   const refreshManagers = () => {
     if (!editor) return
     try {
-      // Re-render style manager
-      if ((editor as any).StyleManager) {
-        ;(editor as any).StyleManager.render()
-      }
-      // Re-render trait manager
-      if (editor.TraitManager) {
-        editor.TraitManager.render()
-      }
+      ;(editor as any).StyleManager?.render?.()
+      editor.TraitManager?.render?.()
     } catch (error) {
       logger.warn('Failed to refresh managers', {
         error: error instanceof Error ? error.message : String(error),
@@ -116,12 +109,11 @@ export default function RightInspector() {
     }
   }
 
-  const handleTabClick = (tabId: 'styles' | 'properties') => {
-    setActiveTab(tabId)
-    // Refresh active manager after switching
+  const handleTabClick = (tab: 'styles' | 'properties') => {
+    setActiveTab(tab)
     setTimeout(() => {
       if (!editor) return
-      if (tabId === 'styles') {
+      if (tab === 'styles') {
         ;(editor as any).StyleManager?.render?.()
       } else {
         editor.TraitManager?.render?.()
@@ -133,20 +125,17 @@ export default function RightInspector() {
     <div className="h-full flex flex-col">
       {/* Tabs */}
       <div className="flex border-b border-gray-200 bg-white">
-        {[
-          { id: 'styles', label: 'Styles' },
-          { id: 'properties', label: 'Properties' },
-        ].map((tab) => (
+        {['styles', 'properties'].map((tab) => (
           <button
-            key={tab.id}
-            onClick={() => handleTabClick(tab.id as 'styles' | 'properties')}
+            key={tab}
+            onClick={() => handleTabClick(tab as 'styles' | 'properties')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.id
+              activeTab === tab
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            {tab.label}
+            {tab === 'styles' ? 'Styles' : 'Properties'}
           </button>
         ))}
       </div>

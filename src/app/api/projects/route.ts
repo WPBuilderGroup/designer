@@ -15,13 +15,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    logger.info(`GET /api/projects - Loading projects for workspace: ${workspace}`)
+    logger.info('Loading projects', { route: '/api/projects', method: 'GET', workspace })
 
     const projects = await getProjectsByWorkspace(workspace)
 
+    logger.info('Projects loaded', { count: projects.length, workspace })
+
     return NextResponse.json({ projects })
   } catch (error) {
-    logger.error('Error in GET /api/projects:', error)
+    logger.error('Failed to load projects', {
+      route: '/api/projects',
+      method: 'GET',
+      error: error instanceof Error ? error.message : String(error),
+    })
 
     return NextResponse.json(
       {
@@ -67,7 +73,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    logger.info(`POST /api/projects - Creating project: ${slug} in workspace: ${workspace}`)
+    logger.info('Creating project', {
+      route: '/api/projects',
+      method: 'POST',
+      workspace,
+      slug,
+      name,
+    })
 
     const project = await createProject(workspace, slug, name)
 
@@ -77,6 +89,13 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    logger.info('Project created', {
+      id: project.id,
+      slug: project.slug,
+      name: project.name,
+      workspace,
+    })
 
     return NextResponse.json({
       success: true,
@@ -89,9 +108,12 @@ export async function POST(request: NextRequest) {
       },
     })
   } catch (error: any) {
-    logger.error('Error in POST /api/projects:', error)
+    logger.error('Error creating project', {
+      route: '/api/projects',
+      method: 'POST',
+      error: error instanceof Error ? error.message : String(error),
+    })
 
-    // Unique constraint violation
     if (error?.code === '23505') {
       return NextResponse.json(
         { error: 'Project slug already exists in this workspace' },

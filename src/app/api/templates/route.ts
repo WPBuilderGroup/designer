@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query, GjsComponent, GjsStyle } from '@/lib/db'
+import { query, type QueryParam, type GjsComponent, type GjsStyle } from '@/lib/db'
 import { safeJson } from '@/lib/api'
 
 export async function GET(req: NextRequest) {
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const tag = (url.searchParams.get('tag') || '').trim()
 
   const clauses: string[] = []
-  const params: unknown[] = []
+  const params: QueryParam[] = []
 
   if (q) {
     params.push(`%${q.toLowerCase()}%`)
@@ -21,7 +21,13 @@ export async function GET(req: NextRequest) {
   }
 
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
-  const { rows } = await query(
+
+  const { rows } = await query<{
+    id: string
+    name: string
+    type: string
+    preview: string
+  }>(
     `
     SELECT id, name, type, COALESCE(meta->>'preview', '') AS preview
     FROM templates
@@ -46,7 +52,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (!name) {
-    return NextResponse.json({ error: 'name required' }, { status: 400 })
+    return NextResponse.json({ error: 'Missing required field: name' }, { status: 400 })
   }
 
   const g = grapesJson || {}
@@ -58,10 +64,10 @@ export async function POST(req: NextRequest) {
   await query(
     `
     INSERT INTO templates(name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta)
-    VALUES($1, $2, $3, $4, $5, $6, $7)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     `,
     [name, type, gHtml, gCss, gComp, gStyles, meta || {}]
   )
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ success: true })
 }

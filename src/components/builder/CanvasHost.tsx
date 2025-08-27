@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from 'react';
 import grapesjs, { Editor } from 'grapesjs';
 import presetWebpage from 'grapesjs-preset-webpage';
 import type { BackboneView } from '@/types/grapesjs';
+import { logger } from '@/lib/logger';
 
 type CanvasHostProps = {
   className?: string;
@@ -17,11 +18,14 @@ type GjsEditor = Editor & {
   Pages: PagesApi;
 };
 
+declare global {
+  interface Window {
+    __gjs?: GjsEditor;
+  }
+}
+
 const isBackboneView = (view: unknown): view is BackboneView =>
-  typeof view === 'object' &&
-  view !== null &&
-  'el' in view &&
-  (view as { el?: unknown }).el instanceof HTMLElement;
+  typeof view === 'object' && view !== null && 'el' in view && (view as any).el instanceof HTMLElement;
 
 const getViewElement = (view: unknown): HTMLElement | null => {
   if (view instanceof HTMLElement) return view;
@@ -64,10 +68,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     editorRef.current = editor;
 
     if (process.env.NODE_ENV === 'development') {
-      (window as any).__gjs = editor;
+      window.__gjs = editor;
     }
-
-    const log = (msg: string) => console.log(msg);
 
     const mountView = (
       ref: React.RefObject<HTMLDivElement | null>,
@@ -75,17 +77,19 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       name: string
     ) => {
       const el = ref.current;
-      if (el) {
-        el.innerHTML = '';
-        const element = getViewElement(view);
-        if (element) {
-          el.appendChild(element);
-          log(`[GrapesJS] ${name} mounted`);
-        } else {
-          console.warn(`[GrapesJS] ${name} render returned invalid view`);
-        }
+      if (!el) {
+        logger.warn(`${name} container not found`);
+        return;
+      }
+
+      el.innerHTML = '';
+      const element = getViewElement(view);
+
+      if (element) {
+        el.appendChild(element);
+        logger.info(`${name} mounted`, { name });
       } else {
-        console.warn(`[GrapesJS] ${name} element not available`);
+        logger.warn(`${name} view is invalid`);
       }
     };
 
@@ -93,51 +97,50 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       try {
         mountView(blocksRef, editor.BlockManager.render(), 'Block Manager');
       } catch (e) {
-        console.warn('[GrapesJS] BlockManager mount error', e);
+        logger.error('BlockManager mount error', { error: e });
       }
 
       try {
         mountView(layersRef, editor.LayerManager.render(), 'Layer Manager');
       } catch (e) {
-        console.warn('[GrapesJS] LayerManager mount error', e);
+        logger.error('LayerManager mount error', { error: e });
       }
 
       try {
         mountView(pagesRef, editor.Pages.render(), 'Pages Manager');
       } catch (e) {
-        console.warn('[GrapesJS] Pages mount error', e);
+        logger.error('PagesManager mount error', { error: e });
       }
 
       try {
         mountView(assetsRef, editor.AssetManager.render(), 'Assets Manager');
       } catch (e) {
-        console.warn('[GrapesJS] AssetManager mount error', e);
+        logger.error('AssetManager mount error', { error: e });
       }
 
       try {
         mountView(stylesRef, editor.StyleManager.render(), 'Style Manager');
       } catch (e) {
-        console.warn('[GrapesJS] StyleManager mount error', e);
+        logger.error('StyleManager mount error', { error: e });
       }
     };
 
     editor.on('load', () => {
-      log('GrapesJS editor initialized successfully');
+      logger.info('GrapesJS editor initialized');
       requestAnimationFrame(mountManagers);
     });
 
     return () => {
       try {
         editor.destroy();
-      } catch {}
+        logger.info('GrapesJS editor destroyed');
+      } catch (e) {
+        logger.warn('Error during editor destroy', { error: e });
+      }
 
       editorRef.current = null;
-
-      if (
-        process.env.NODE_ENV === 'development' &&
-        (window as any).__gjs === editor
-      ) {
-        delete (window as any).__gjs;
+      if (process.env.NODE_ENV === 'development' && window.__gjs === editor) {
+        delete window.__gjs;
       }
     };
   }, []);

@@ -1,6 +1,6 @@
 // lib/db.ts
 import { Pool, PoolClient } from 'pg'
-import { logger } from './logger'
+import { logger } from '@/lib/logger'
 
 declare global {
   // eslint-disable-next-line no-var
@@ -36,7 +36,6 @@ function createPool(): Pool {
 export function getPool(): Pool {
   if (globalPool) return globalPool
 
-  // Reuse across HMR in dev
   if (process.env.NODE_ENV !== 'production') {
     if (!global.__PG_POOL__) {
       global.__PG_POOL__ = createPool()
@@ -50,16 +49,22 @@ export function getPool(): Pool {
 }
 
 // Generic query function with proper error handling
-export async function query<T>(
+export type QueryParam = string | number | boolean | null | Date | Uint8Array
+
+export async function query<T = unknown>(
   text: string,
-  params: unknown[] = []
+  params?: QueryParam[]
 ): Promise<{ rows: T[]; rowCount: number }> {
   const pool = getPool()
   const start = Date.now()
   try {
     const result = await pool.query<T>(text, params as any[])
     const duration = Date.now() - start
-    logger.debug('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
+
+    if (process.env.NODE_ENV === 'development') {
+      logger.info('Query executed:', { text, duration: `${duration}ms`, rows: result.rowCount })
+    }
+
     return {
       rows: result.rows,
       rowCount: result.rowCount ?? 0,
@@ -124,8 +129,8 @@ export interface GjsComponent {
 }
 
 export interface GjsStyle {
-  selectors: string[]
-  style: Record<string, unknown>
+  selectors?: { name: string }[] | string[]
+  style?: Record<string, string | number>
   [key: string]: unknown
 }
 
@@ -155,7 +160,11 @@ export interface Tenant {
   created_at: string
 }
 
-// Helper functions for GrapesJS data management
+export interface ProjectWithPageCount extends Project {
+  page_count: number
+}
+
+// Get page data
 export async function getPageData(projectSlug: string, pageSlug: string): Promise<PageData | null> {
   try {
     const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
@@ -188,15 +197,17 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
   }
 }
 
+export interface GrapesJSPageContent {
+  'gjs-html'?: string
+  'gjs-css'?: string
+  'gjs-components'?: GjsComponent[]
+  'gjs-styles'?: GjsStyle[]
+}
+
 export async function upsertPageData(
   projectSlug: string,
   pageSlug: string,
-  data: {
-    'gjs-html'?: string
-    'gjs-css'?: string
-    'gjs-components'?: GjsComponent[]
-    'gjs-styles'?: GjsStyle[]
-  }
+  data: GrapesJSPageContent
 ): Promise<boolean> {
   try {
     return await transaction(async (client) => {
@@ -232,16 +243,13 @@ export async function upsertPageData(
         data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null,
       ])
 
+      logger.info(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
       return result.rows.length > 0
     })
   } catch (error) {
     logger.error('Error upserting page data:', error)
     throw error
   }
-}
-
-export interface ProjectWithPageCount extends Project {
-  page_count: number
 }
 
 export async function getProjectsByWorkspace(workspaceSlug: string): Promise<ProjectWithPageCount[]> {
@@ -279,7 +287,6 @@ export async function createProject(
 ): Promise<Project | null> {
   try {
     return await transaction(async (client) => {
-      // Get or create tenant
       const tenantQuery = `SELECT id FROM tenants WHERE slug = $1 LIMIT 1`
       const tenantResult = await client.query<{ id: string }>(tenantQuery, [workspaceSlug])
 
@@ -300,7 +307,6 @@ export async function createProject(
         tenantId = tenantResult.rows[0].id
       }
 
-      // Create project
       const createProjectQuery = `
         INSERT INTO projects (tenant_id, slug, name, created_at)
         VALUES ($1, $2, $3, NOW())
