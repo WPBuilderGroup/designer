@@ -1,10 +1,11 @@
 import { HTMLAttributes } from 'react'
+import type { ReactNode } from 'react'
 import { cn } from '../../lib/utils'
 import { ProjectStatus } from '../../lib/types'
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: ProjectStatus | 'default'
-  children: React.ReactNode
+  children: ReactNode
 }
 
 const Badge = ({ className, variant = 'default', children, ...props }: BadgeProps) => {
