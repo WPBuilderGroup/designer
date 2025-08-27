@@ -60,9 +60,9 @@ async function run() {
           'page',
           t.html,
           t.css,
-          JSON.stringify([]), // gjs_components
-          JSON.stringify([]), // gjs_styles
-          JSON.stringify({ preview: t.preview }), // meta
+          JSON.stringify([]),
+          JSON.stringify([]),
+          JSON.stringify({ preview: t.preview }),
         ]
       )
     }
