@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getPagesByProject, createPage } from '@/lib/db'
+import { safeJson } from '@/lib/api'
 import { logger } from '@/lib/logger'
 
 export async function GET(request: NextRequest) {
@@ -14,27 +15,28 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    logger.info(`GET /api/pages - Loading pages for project: ${project}`)
+    logger.info('Loading pages', { route: '/api/pages', method: 'GET', project })
 
     const pages = await getPagesByProject(project)
 
-    logger.info(`Found ${pages.length} pages for project: ${project}`)
-    return NextResponse.json({ pages })
+    logger.info('Pages loaded', { count: pages.length, project })
 
+    return NextResponse.json({ pages })
   } catch (error) {
-    console.error('Error in GET /api/pages:', error)
-    
+    logger.error('Failed to load pages', {
+      route: '/api/pages',
+      method: 'GET',
+      error: error instanceof Error ? error.message : String(error),
+    })
+
     if (error instanceof Error && error.message.includes('Project not found')) {
-      return NextResponse.json(
-        { error: 'Project not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
@@ -45,7 +47,7 @@ export async function POST(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
     const project = searchParams.get('project')
-    
+
     if (!project) {
       return NextResponse.json(
         { error: 'Missing required parameter: project' },
@@ -53,8 +55,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const body = await request.json()
-    const { slug } = body
+    const [body, jsonError] = await safeJson(request)
+    if (jsonError) return jsonError
+
+    const { slug } = body as { slug?: string }
 
     if (!slug) {
       return NextResponse.json(
@@ -63,16 +67,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate slug format
     const slugRegex = /^[a-z0-9-]+$/
     if (!slugRegex.test(slug)) {
       return NextResponse.json(
-        { error: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.' },
+        {
+          error: 'Invalid slug format. Use only lowercase letters, numbers, and hyphens.',
+        },
         { status: 400 }
       )
     }
 
-    logger.info(`POST /api/pages - Creating page: ${slug} in project: ${project}`)
+    logger.info('Creating page', { route: '/api/pages', method: 'POST', project, slug })
 
     const page = await createPage(project, slug)
 
@@ -83,7 +88,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    logger.info(`Page created successfully: ${page.slug}`)
+    logger.info('Page created', { project, slug: page.slug, id: page.id })
 
     return NextResponse.json({
       success: true,
@@ -91,34 +96,34 @@ export async function POST(request: NextRequest) {
         id: page.id,
         slug: page.slug,
         updated_at: page.updated_at,
-        has_content: false
-      }
+        has_content: false,
+      },
+    })
+  } catch (error: any) {
+    logger.error('Error creating page', {
+      route: '/api/pages',
+      method: 'POST',
+      error: error instanceof Error ? error.message : String(error),
     })
 
-  } catch (error) {
-    console.error('Error in POST /api/pages:', error)
-    
-    // Handle specific database errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === '23505') { // Unique constraint violation
-        return NextResponse.json(
-          { error: 'Page slug already exists in this project' },
-          { status: 409 }
-        )
-      }
+    if (error?.code === '23505') {
+      return NextResponse.json(
+        { error: 'Page slug already exists in this project' },
+        { status: 409 }
+      )
     }
-    
+
     if (error instanceof Error && error.message.includes('Project not found')) {
       return NextResponse.json(
         { error: 'Project not found' },
         { status: 404 }
       )
     }
-    
+
     return NextResponse.json(
-      { 
+      {
         error: 'Internal server error',
-        message: error instanceof Error ? error.message : 'Unknown error'
+        message: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
     )
