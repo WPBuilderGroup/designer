@@ -2,49 +2,46 @@
 
 import { useState, useEffect } from 'react'
 import PublishModal from './PublishModal'
+import type {
+  GjsEditor,
+  GjsReadyDetail,
+  GjsDeviceChangeDetail,
+  GjsPreviewToggleDetail,
+} from '@/types/gjs'
 
 export default function Topbar() {
   const [currentDevice, setCurrentDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [isPreview, setIsPreview] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
-  const [editor, setEditor] = useState<any>(null)
+  const [editor, setEditor] = useState<GjsEditor | null>(null)
   const [showPublishModal, setShowPublishModal] = useState(false)
 
   const deviceSizes = [
     { id: 'desktop', icon: '💻', label: 'Desktop', active: currentDevice === 'desktop' },
     { id: 'tablet', icon: '📱', label: 'Tablet', active: currentDevice === 'tablet' },
-    { id: 'mobile', icon: '📱', label: 'Mobile', active: currentDevice === 'mobile' }
-  ]
+    { id: 'mobile', icon: '📱', label: 'Mobile', active: currentDevice === 'mobile' },
+  ] as const
 
   useEffect(() => {
-    // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
-      const editorInstance = event.detail
+    const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
+      const { editor: editorInstance } = event.detail
       setEditor(editorInstance)
-
-      // Initialize undo/redo state
       updateHistoryState(editorInstance)
     }
 
-    // Listen for device changes
-    const handleDeviceChange = (event: CustomEvent) => {
+    const handleDeviceChange = (event: CustomEvent<GjsDeviceChangeDetail>) => {
       setCurrentDevice(event.detail.device)
     }
 
-    // Listen for preview toggle
-    const handlePreviewToggle = (event: CustomEvent) => {
+    const handlePreviewToggle = (event: CustomEvent<GjsPreviewToggleDetail>) => {
       setIsPreview(event.detail.isPreview)
     }
 
-    // Listen for history changes
     const handleHistoryChange = () => {
-      if (editor) {
-        updateHistoryState(editor)
-      }
+      if (editor) updateHistoryState(editor)
     }
 
-    // Add event listeners
     window.addEventListener('gjs-ready', handleGjsReady as EventListener)
     window.addEventListener('gjs-device-change', handleDeviceChange as EventListener)
     window.addEventListener('gjs-preview-toggle', handlePreviewToggle as EventListener)
@@ -58,77 +55,56 @@ export default function Topbar() {
     }
   }, [editor])
 
-  const updateHistoryState = (editorInstance: any) => {
+  const updateHistoryState = (editorInstance: GjsEditor) => {
     const undoManager = editorInstance.UndoManager
     setCanUndo(undoManager.hasUndo())
     setCanRedo(undoManager.hasRedo())
   }
 
   const handleDeviceClick = (deviceId: 'desktop' | 'tablet' | 'mobile') => {
-    if (editor) {
-      editor.runCommand(`set-device-${deviceId}`)
-    }
+    if (editor) editor.runCommand(`set-device-${deviceId}`)
   }
 
   const handlePreview = () => {
-    if (editor) {
-      editor.runCommand('preview')
-    }
+    if (editor) editor.runCommand('preview')
   }
 
   const handleFullscreen = () => {
-    if (editor) {
-      editor.runCommand('fullscreen')
-    }
+    if (editor) editor.runCommand('fullscreen')
   }
 
   const handleUndo = () => {
-    if (editor && canUndo) {
-      editor.runCommand('core:undo')
-    }
+    if (editor && canUndo) editor.runCommand('core:undo')
   }
 
   const handleRedo = () => {
-    if (editor && canRedo) {
-      editor.runCommand('core:redo')
-    }
+    if (editor && canRedo) editor.runCommand('core:redo')
   }
 
   const handleClear = () => {
-    if (editor) {
-      editor.runCommand('clear-canvas')
-    }
+    if (editor) editor.runCommand('clear-canvas')
   }
 
   const handlePublish = () => {
-    // Get current project and page from URL params
     const urlParams = new URLSearchParams(window.location.search)
     const project = urlParams.get('project') || 'default-project'
     const page = urlParams.get('page') || 'home'
-
-    // Show the publish modal
     setShowPublishModal(true)
-
-    // Dispatch publish request event
-    window.dispatchEvent(new CustomEvent('publish-request', {
-      detail: { project, page }
-    }))
+    window.dispatchEvent(new CustomEvent('publish-request', { detail: { project, page } }))
   }
 
   return (
     <>
       <div className="h-full flex items-center justify-between px-4 bg-white border-b border-gray-200">
-        {/* Left Section - Device Selector */}
+        {/* Left: Device Selector */}
         <div className="flex items-center space-x-2">
           <div className="flex items-center space-x-1 bg-gray-100 rounded-lg p-1">
             {deviceSizes.map((device) => (
               <button
                 key={device.id}
-                onClick={() => handleDeviceClick(device.id as 'desktop' | 'tablet' | 'mobile')}
+                onClick={() => handleDeviceClick(device.id)}
                 className={`px-3 py-1 text-xs font-medium rounded transition-colors ${
-                  device.active 
-                    ? 'bg-white text-gray-900 shadow-sm' 
-                    : 'text-gray-600 hover:text-gray-900'
+                  device.active ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                 }`}
                 title={device.label}
               >
@@ -139,15 +115,13 @@ export default function Topbar() {
           </div>
         </div>
 
-        {/* Center Section - Undo/Redo */}
+        {/* Center: Undo/Redo */}
         <div className="flex items-center space-x-1">
           <button
             onClick={handleUndo}
             disabled={!canUndo}
             className={`p-2 rounded transition-colors ${
-              canUndo 
-                ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' 
-                : 'text-gray-300 cursor-not-allowed'
+              canUndo ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'
             }`}
             title="Undo"
           >
@@ -159,9 +133,7 @@ export default function Topbar() {
             onClick={handleRedo}
             disabled={!canRedo}
             className={`p-2 rounded transition-colors ${
-              canRedo 
-                ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' 
-                : 'text-gray-300 cursor-not-allowed'
+              canRedo ? 'text-gray-600 hover:text-gray-900 hover:bg-gray-100' : 'text-gray-300 cursor-not-allowed'
             }`}
             title="Redo"
           >
@@ -171,14 +143,12 @@ export default function Topbar() {
           </button>
         </div>
 
-        {/* Right Section - Actions */}
+        {/* Right: Actions */}
         <div className="flex items-center space-x-2">
           <button
             onClick={handlePreview}
             className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${
-              isPreview
-                ? 'text-blue-700 bg-blue-100 hover:bg-blue-200'
-                : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
+              isPreview ? 'text-blue-700 bg-blue-100 hover:bg-blue-200' : 'text-gray-700 bg-gray-100 hover:bg-gray-200'
             }`}
           >
             <svg className="w-4 h-4 mr-1.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -220,11 +190,7 @@ export default function Topbar() {
         </div>
       </div>
 
-      {/* Publish Modal */}
-      <PublishModal
-        isOpen={showPublishModal}
-        onClose={() => setShowPublishModal(false)}
-      />
+      <PublishModal isOpen={showPublishModal} onClose={() => setShowPublishModal(false)} />
     </>
   )
 }
