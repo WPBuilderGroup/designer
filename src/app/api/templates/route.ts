@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import {
+  query,
+  type QueryParam,
+  type GjsComponent,
+  type GjsStyle,
+} from '@/lib/db'
+import { safeJson } from '@/lib/api'
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
@@ -7,39 +13,73 @@ export async function GET(req: NextRequest) {
   const tag = (url.searchParams.get('tag') || '').trim()
 
   const clauses: string[] = []
-  const params: string[] = []
-  if (q) { params.push(`%${q.toLowerCase()}%`); clauses.push(`lower(name) like $${params.length}`) }
-  if (tag) { params.push(tag); clauses.push(`(meta->'tags')::jsonb ? $${params.length}`) }
+  const params: QueryParam[] = []
 
-  const where = clauses.length ? `where ${clauses.join(' and ')}` : ''
-  const { rows } = await query(
-    `select id, name, type, coalesce(meta->>'preview','') as preview from templates ${where} order by created_at desc`,
+  if (q) {
+    params.push(`%${q.toLowerCase()}%`)
+    clauses.push(`lower(name) LIKE $${params.length}`)
+  }
+
+  if (tag) {
+    params.push(tag)
+    clauses.push(`(meta->'tags')::jsonb ? $${params.length}`)
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
+
+  const { rows } = await query<{
+    id: string
+    name: string
+    type: string
+    preview: string
+  }>(
+    `
+    SELECT id, name, type, COALESCE(meta->>'preview', '') AS preview
+    FROM templates
+    ${where}
+    ORDER BY created_at DESC
+    `,
     params
   )
+
   return NextResponse.json(rows)
 }
 
 export async function POST(req: NextRequest) {
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+  const [body, jsonError] = await safeJson<Record<string, unknown>>(req)
+  if (jsonError) return jsonError
+
   const { name, type = 'page', grapesJson, meta } = body as {
     name?: string
     type?: string
     grapesJson?: Record<string, unknown>
     meta?: Record<string, unknown>
   }
-  if (!name) return NextResponse.json({ error: 'name required' }, { status: 400 })
+
+  if (!name) {
+    return NextResponse.json(
+      { error: 'Missing required field: name' },
+      { status: 400 }
+    )
+  }
 
   const g = grapesJson || {}
-  const gHtml = (g['gjs-html'] as string) || ''
-  const gCss = (g['gjs-css'] as string) || ''
-  const gComp = (g['gjs-components'] as object) || {}
-  const gStyles = (g['gjs-styles'] as object) || {}
+  const gHtml = typeof g['gjs-html'] === 'string' ? g['gjs-html'] : ''
+  const gCss = typeof g['gjs-css'] === 'string' ? g['gjs-css'] : ''
+  const gComp = Array.isArray(g['gjs-components'])
+    ? (g['gjs-components'] as GjsComponent[])
+    : []
+  const gStyles = Array.isArray(g['gjs-styles'])
+    ? (g['gjs-styles'] as GjsStyle[])
+    : []
 
   await query(
-    `insert into templates(name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta)
-     values($1,$2,$3,$4,$5,$6,$7)`,
+    `
+    INSERT INTO templates(name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `,
     [name, type, gHtml, gCss, gComp, gStyles, meta || {}]
   )
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ success: true })
 }

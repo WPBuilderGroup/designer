@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Designer studio – designer.edu.vn",
-  description: "Designer studio: build and publish landing pages for designer.edu.vn",
+  description:
+    "Designer studio: build and publish landing pages for designer.edu.vn",
 };
 
 export default function RootLayout({

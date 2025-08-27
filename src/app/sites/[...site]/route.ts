@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
-import { join } from 'path'
+import { resolve, relative, isAbsolute } from 'path'
 
 export async function GET(
   _request: NextRequest,
@@ -15,7 +15,21 @@ export async function GET(
     }
 
     const [project, filename] = sitePath
-    const filepath = join(process.cwd(), '.next', 'cache', 'sites', project, filename)
+
+    const isValidSegment = (segment: string) =>
+      /^[a-zA-Z0-9._-]+$/.test(segment) && !segment.includes('..')
+
+    if (!isValidSegment(project) || !isValidSegment(filename)) {
+      return new NextResponse('Invalid site path', { status: 400 })
+    }
+
+    const baseDir = resolve(process.cwd(), '.next', 'cache', 'sites')
+    const filepath = resolve(baseDir, project, filename)
+    const relativePath = relative(baseDir, filepath)
+
+    if (relativePath.startsWith('..') || isAbsolute(relativePath)) {
+      return new NextResponse('Invalid site path', { status: 400 })
+    }
 
     try {
       const content = await readFile(filepath, 'utf8')
