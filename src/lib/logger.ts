@@ -1,23 +1,44 @@
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
+export type LogMeta = Record<string, unknown>
 
 const levelOrder: Record<LogLevel, number> = {
   debug: 0,
   info: 1,
   warn: 2,
-  error: 3
+  error: 3,
 }
 
+// Only log debug/info in development; warn/error in production
 const currentLevel: LogLevel = process.env.NODE_ENV === 'development' ? 'debug' : 'warn'
 
-function log(level: LogLevel, ...args: unknown[]) {
+function log(level: LogLevel, message: string, meta?: LogMeta) {
   if (levelOrder[level] < levelOrder[currentLevel]) return
-  const fn = level === 'warn' ? console.warn : level === 'error' ? console.error : console.log
-  fn(...(args as unknown[]))
+
+  const entry = {
+    level,
+    message,
+    timestamp: new Date().toISOString(),
+    ...(meta ?? {}),
+  }
+
+  const output = JSON.stringify(entry)
+
+  switch (level) {
+    case 'error':
+      console.error(output)
+      break
+    case 'warn':
+      console.warn(output)
+      break
+    default:
+      console.log(output)
+      break
+  }
 }
 
 export const logger = {
-  debug: (...args: unknown[]) => log('debug', ...args),
-  info: (...args: unknown[]) => log('info', ...args),
-  warn: (...args: unknown[]) => log('warn', ...args),
-  error: (...args: unknown[]) => log('error', ...args)
+  debug: (message: string, meta?: LogMeta) => log('debug', message, meta),
+  info: (message: string, meta?: LogMeta) => log('info', message, meta),
+  warn: (message: string, meta?: LogMeta) => log('warn', message, meta),
+  error: (message: string, meta?: LogMeta) => log('error', message, meta),
 }
