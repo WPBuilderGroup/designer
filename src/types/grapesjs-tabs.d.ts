@@ -1,5 +1,6 @@
+import type { Editor } from 'grapesjs';
+
 declare module 'grapesjs-tabs' {
-  const plugin: any;
-  export default plugin;
+  export default function tabs(editor: Editor, opts?: Record<string, unknown>): void;
 }
 
