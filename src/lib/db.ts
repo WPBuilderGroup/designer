@@ -3,11 +3,9 @@ import { Pool, PoolClient } from 'pg'
 import { logger } from '@/lib/logger'
 
 declare global {
-  // eslint-disable-next-line no-var
   var __PG_POOL__: Pool | undefined
 }
 
-// Global connection pool (dev-safe via globalThis)
 let globalPool: Pool | null = null
 
 function createPool(): Pool {
@@ -32,7 +30,6 @@ function createPool(): Pool {
   return pool
 }
 
-// Database connection configuration
 export function getPool(): Pool {
   if (globalPool) return globalPool
 
@@ -48,7 +45,6 @@ export function getPool(): Pool {
   return globalPool!
 }
 
-// Generic query function with proper error handling
 export type QueryParam = string | number | boolean | null | Date | Uint8Array
 
 export async function query<T = unknown>(
@@ -77,7 +73,6 @@ export async function query<T = unknown>(
   }
 }
 
-// Transaction helper
 export async function transaction<T>(callback: (client: PoolClient) => Promise<T>): Promise<T> {
   const pool = getPool()
   const client = await pool.connect()
@@ -98,7 +93,6 @@ export async function transaction<T>(callback: (client: PoolClient) => Promise<T
   }
 }
 
-// Health check function
 export async function healthCheck(): Promise<boolean> {
   try {
     await query('SELECT 1 as health_check')
@@ -109,7 +103,6 @@ export async function healthCheck(): Promise<boolean> {
   }
 }
 
-// Close pool gracefully
 export async function closePool(): Promise<void> {
   if (globalPool) {
     await globalPool.end()
@@ -121,7 +114,6 @@ export async function closePool(): Promise<void> {
   }
 }
 
-// Types for our database schema
 export interface GjsComponent {
   type: string
   components?: GjsComponent[]
@@ -164,7 +156,6 @@ export interface ProjectWithPageCount extends Project {
   page_count: number
 }
 
-// Get page data
 export async function getPageData(projectSlug: string, pageSlug: string): Promise<PageData | null> {
   try {
     const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
