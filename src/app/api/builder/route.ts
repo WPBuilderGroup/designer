@@ -1,4 +1,6 @@
+// app/api/grapesjs/route.ts
 import { NextRequest, NextResponse } from 'next/server'
+import { safeJson } from '@/lib/api'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,9 +12,10 @@ interface GrapesJSPayload {
   'gjs-assets': unknown[]
 }
 
-// In-memory storage for demo; replace with DB layer
+// In-memory storage (temporary; replace with DB layer)
 const mem = new Map<string, GrapesJSPayload>()
-const keyOf = (project: string | null, page: string | null) => `${project ?? 'unknown'}::${page ?? 'home'}`
+const keyOf = (project: string | null, page: string | null) =>
+  `${project ?? 'unknown'}::${page ?? 'home'}`
 
 const emptyPayload: GrapesJSPayload = {
   'gjs-html': '',
@@ -26,24 +29,25 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
   const project = sp.get('project')
   const page = sp.get('page')
-  const data = mem.get(keyOf(project, page)) ?? emptyPayload
 
+  const data = mem.get(keyOf(project, page)) ?? emptyPayload
   return NextResponse.json(data)
 }
 
 export async function POST(req: NextRequest) {
-  const body: Record<string, unknown> = await req.json().catch(() => ({}))
+  const [body, jsonError] = await safeJson<Record<string, unknown>>(req)
+  if (jsonError) return jsonError
+
   const sp = req.nextUrl.searchParams
   const project = sp.get('project')
   const page = sp.get('page')
 
-  // Normalize payload shape
   const payload: GrapesJSPayload = {
     'gjs-html': typeof body['gjs-html'] === 'string' ? body['gjs-html'] : '',
     'gjs-css': typeof body['gjs-css'] === 'string' ? body['gjs-css'] : '',
-    'gjs-components': Array.isArray(body['gjs-components']) ? (body['gjs-components'] as unknown[]) : [],
-    'gjs-styles': Array.isArray(body['gjs-styles']) ? (body['gjs-styles'] as unknown[]) : [],
-    'gjs-assets': Array.isArray(body['gjs-assets']) ? (body['gjs-assets'] as unknown[]) : [],
+    'gjs-components': Array.isArray(body['gjs-components']) ? body['gjs-components'] : [],
+    'gjs-styles': Array.isArray(body['gjs-styles']) ? body['gjs-styles'] : [],
+    'gjs-assets': Array.isArray(body['gjs-assets']) ? body['gjs-assets'] : [],
   }
 
   mem.set(keyOf(project, page), payload)
