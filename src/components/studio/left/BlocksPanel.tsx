@@ -31,6 +31,8 @@ import {
   User
 } from 'lucide-react'
 
+import { logger } from '@/lib/logger'
+
 export default function BlocksPanel() {
   const blockCategories = [
     {
@@ -88,9 +90,9 @@ export default function BlocksPanel() {
     }
   ]
 
-  const handleBlockClick = (blockId: string) => {
-    console.log('add block', blockId)
-  }
+    const handleBlockClick = (blockId: string) => {
+      logger.info('add block', blockId)
+    }
 
   const handleKeyDown = (event: React.KeyboardEvent, blockId: string) => {
     if (event.key === 'Enter' || event.key === ' ') {
