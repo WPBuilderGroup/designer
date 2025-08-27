@@ -1,24 +1,25 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react';
+import type { GjsEditor, GjsReadyDetail, GjsStyleManager } from '@/types/gjs';
 
 // Helper to safely get StyleManager element after editor loaded
-function resolveStyleEl(ed?: any): HTMLElement | null {
+function resolveStyleEl(ed?: GjsEditor): HTMLElement | null {
   if (!ed) return null;
-  const sm: any = ed.StyleManager ?? ed.Styles;
+  const sm: GjsStyleManager | undefined = ed.StyleManager ?? ed.Styles;
   if (!sm) return null;
   const isLoaded = typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.();
   if (!isLoaded) return null;
   const view = typeof sm.getView === 'function' ? sm.getView() : undefined;
-  const el = view?.el ?? (typeof sm.render === 'function' ? sm.render().el : undefined);
+  const el = view?.el ?? sm.render().el;
   return el instanceof HTMLElement ? el : null;
 }
 
 export default function RightInspector() {
-  const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles')
-  const [editor, setEditor] = useState<any>(null)
-  const stylesContainerRef = useRef<HTMLDivElement>(null)
-  const propertiesContainerRef = useRef<HTMLDivElement>(null)
+  const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles');
+  const [editor, setEditor] = useState<GjsEditor | null>(null);
+  const stylesContainerRef = useRef<HTMLDivElement>(null);
+  const propertiesContainerRef = useRef<HTMLDivElement>(null);
 
   const tabs = [
     { id: 'styles', label: 'Styles' },
@@ -27,34 +28,34 @@ export default function RightInspector() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
-      const editorInstance = event.detail
-      setEditor(editorInstance)
+    const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
+      const { editor: editorInstance } = event.detail;
+      setEditor(editorInstance);
 
       // Mount the style manager and trait manager after editor is ready
       setTimeout(() => {
-        mountManagers(editorInstance)
-      }, 100)
-    }
+        mountManagers(editorInstance);
+      }, 100);
+    };
 
     // Listen for component selection changes
     const handleComponentSelect = () => {
       // Refresh the managers when component selection changes
       if (editor) {
-        refreshManagers()
+        refreshManagers();
       }
-    }
+    };
 
-    window.addEventListener('gjs-ready', handleGjsReady as EventListener)
-    window.addEventListener('gjs-component-select', handleComponentSelect)
+    window.addEventListener('gjs-ready', handleGjsReady as EventListener);
+    window.addEventListener('gjs-component-select', handleComponentSelect);
 
     return () => {
-      window.removeEventListener('gjs-ready', handleGjsReady as EventListener)
-      window.removeEventListener('gjs-component-select', handleComponentSelect)
-    }
-  }, [editor])
+      window.removeEventListener('gjs-ready', handleGjsReady as EventListener);
+      window.removeEventListener('gjs-component-select', handleComponentSelect);
+    };
+  }, [editor]);
 
-  const mountManagers = (editorInstance: any) => {
+  const mountManagers = (editorInstance: GjsEditor) => {
     try {
       // Mount Style Manager
       const stylesContainer = stylesContainerRef.current;
@@ -72,9 +73,7 @@ export default function RightInspector() {
       // Mount Trait Manager (Properties)
       const propertiesContainer = propertiesContainerRef.current;
       if (propertiesContainer) {
-        const tm: any = editorInstance.TraitManager;
-        const tmView = tm?.render();
-        const tmEl = (tmView as any)?.el;
+        const tmEl = editorInstance.TraitManager.render().el;
         propertiesContainer.innerHTML = '';
         if (tmEl instanceof HTMLElement) {
           propertiesContainer.appendChild(tmEl);
@@ -86,50 +85,50 @@ export default function RightInspector() {
 
       // Listen for component selection to update managers
       editorInstance.on('component:selected', () => {
-        setTimeout(() => refreshManagers(), 50)
-      })
+        setTimeout(() => refreshManagers(), 50);
+      });
 
       editorInstance.on('component:deselected', () => {
-        setTimeout(() => refreshManagers(), 50)
-      })
+        setTimeout(() => refreshManagers(), 50);
+      });
 
     } catch (error) {
-      console.error('Failed to mount managers:', error)
+      console.error('Failed to mount managers:', error);
     }
-  }
+  };
 
   const refreshManagers = () => {
-    if (!editor) return
+    if (!editor) return;
 
     try {
       // Refresh Style Manager
-      const styleManager = editor.StyleManager
+      const styleManager = editor.StyleManager;
       if (styleManager && stylesContainerRef.current) {
-        styleManager.render()
+        styleManager.render();
       }
 
       // Refresh Trait Manager
-      const traitManager = editor.TraitManager
+      const traitManager = editor.TraitManager;
       if (traitManager && propertiesContainerRef.current) {
-        traitManager.render()
+        traitManager.render();
       }
     } catch (error) {
-      console.warn('Failed to refresh managers:', error)
+      console.warn('Failed to refresh managers:', error);
     }
-  }
+  };
 
   const handleTabClick = (tabId: 'styles' | 'properties') => {
-    setActiveTab(tabId)
+    setActiveTab(tabId);
 
     // Refresh the active manager when switching tabs
     setTimeout(() => {
       if (tabId === 'styles' && editor) {
-        editor.StyleManager.render()
+        editor.StyleManager.render();
       } else if (tabId === 'properties' && editor) {
-        editor.TraitManager.render()
+        editor.TraitManager.render();
       }
-    }, 50)
-  }
+    }, 50);
+  };
 
   return (
     <div className="h-full flex flex-col">

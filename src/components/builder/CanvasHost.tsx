@@ -6,7 +6,6 @@ import presetWebpage from 'grapesjs-preset-webpage';
 import type { BackboneView } from '@/types/grapesjs';
 
 type CanvasHostProps = {
-  // có thể truyền thêm props nếu bạn đang dùng (projectId, pageId,…)
   className?: string;
 };
 
@@ -14,7 +13,9 @@ interface PagesApi {
   render(): BackboneView | HTMLElement;
 }
 
-type GjsEditor = Editor & { Pages: PagesApi };
+type GjsEditor = Editor & {
+  Pages: PagesApi;
+};
 
 const isBackboneView = (view: unknown): view is BackboneView =>
   typeof view === 'object' &&
@@ -29,27 +30,24 @@ const getViewElement = (view: unknown): HTMLElement | null => {
 };
 
 export default function CanvasHost({ className }: CanvasHostProps) {
-  // Canvas & panel refs
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const blocksRef = useRef<HTMLDivElement | null>(null);
   const layersRef = useRef<HTMLDivElement | null>(null);
   const pagesRef = useRef<HTMLDivElement | null>(null);
   const assetsRef = useRef<HTMLDivElement | null>(null);
   const stylesRef = useRef<HTMLDivElement | null>(null);
-
-  const editorRef = useRef<Editor | null>(null);
+  const editorRef = useRef<GjsEditor | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    // Khởi tạo editor
     const editor = grapesjs.init({
       container: canvasRef.current,
       height: '100%',
       width: '100%',
       fromElement: false,
-      storageManager: false, // bạn có thể bật lại sau
-      panels: { defaults: [] }, // ta tự build UI ngoài
+      storageManager: false,
+      panels: { defaults: [] },
       deviceManager: {
         devices: [
           { name: 'Desktop', width: '' },
@@ -64,9 +62,9 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     }) as GjsEditor;
 
     editorRef.current = editor;
-    // Expose để debug (chỉ trong môi trường development)
+
     if (process.env.NODE_ENV === 'development') {
-      window.__gjs = editor;
+      (window as any).__gjs = editor;
     }
 
     const log = (msg: string) => console.log(msg);
@@ -74,7 +72,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     const mountView = (
       ref: React.RefObject<HTMLDivElement | null>,
       view: unknown,
-      name: string,
+      name: string
     ) => {
       const el = ref.current;
       if (el) {
@@ -123,10 +121,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       }
     };
 
-    // Chờ editor load xong rồi mount managers
     editor.on('load', () => {
       log('GrapesJS editor initialized successfully');
-      // Đảm bảo DOM panels đã render
       requestAnimationFrame(mountManagers);
     });
 
@@ -134,39 +130,39 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       try {
         editor.destroy();
       } catch {}
+
       editorRef.current = null;
+
       if (
         process.env.NODE_ENV === 'development' &&
-        window.__gjs === editor
+        (window as any).__gjs === editor
       ) {
-        delete window.__gjs;
+        delete (window as any).__gjs;
       }
     };
   }, []);
 
-  // Ở đây chỉ dựng layout + container cho các panel
   return (
-      <div className={className ?? 'h-full w-full flex'}>
-        {/* Left sidebar – bạn có thể thay bằng component riêng nếu muốn */}
-        <aside className="w-[300px] shrink-0 border-r border-border bg-background">
-          <div className="h-1/2 overflow-auto" ref={pagesRef} aria-label="Pages" />
-          <div className="h-1/2 overflow-auto" ref={layersRef} aria-label="Layers" />
-        </aside>
+    <div className={className ?? 'h-full w-full flex'}>
+      {/* Left sidebar */}
+      <aside className="w-[300px] shrink-0 border-r border-border bg-background">
+        <div className="h-1/2 overflow-auto" ref={pagesRef} aria-label="Pages" />
+        <div className="h-1/2 overflow-auto" ref={layersRef} aria-label="Layers" />
+      </aside>
 
-        {/* Canvas */}
-        <main className="flex-1 relative bg-muted">
-          <div ref={canvasRef} className="absolute inset-0" />
-        </main>
+      {/* Canvas */}
+      <main className="flex-1 relative bg-muted">
+        <div ref={canvasRef} className="absolute inset-0" />
+      </main>
 
-        {/* Right sidebar */}
-        <aside className="w-[360px] shrink-0 border-l border-border bg-background">
-          <div className="h-1/2 overflow-auto" ref={blocksRef} aria-label="Blocks" />
-          <div className="h-1/2 overflow-auto">
-            {/* Tabs Styles/Assets nếu bạn muốn tách riêng, tạm để 2 khối dưới đây */}
-            <div className="h-[50%] overflow-auto" ref={stylesRef} aria-label="Styles" />
-            <div className="h-[50%] overflow-auto" ref={assetsRef} aria-label="Assets" />
-          </div>
-        </aside>
-      </div>
+      {/* Right sidebar */}
+      <aside className="w-[360px] shrink-0 border-l border-border bg-background">
+        <div className="h-1/2 overflow-auto" ref={blocksRef} aria-label="Blocks" />
+        <div className="h-1/2 overflow-auto">
+          <div className="h-[50%] overflow-auto" ref={stylesRef} aria-label="Styles" />
+          <div className="h-[50%] overflow-auto" ref={assetsRef} aria-label="Assets" />
+        </div>
+      </aside>
+    </div>
   );
 }
