@@ -1,9 +1,9 @@
-export type Workspace = {
+export interface Workspace {
   id: string;
   name: string;
   role?: 'owner' | 'admin' | 'member';
   createdAt: number;
-};
+}
 
 export type ProjectStatus = 'draft' | 'published';
 
