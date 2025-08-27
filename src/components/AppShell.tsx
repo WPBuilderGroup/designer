@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
 import { listWorkspaces, getWorkspace } from '../lib/store'
-import type { Workspace } from '@/types/workspace'
+import type { Workspace } from '../lib/types'
 
 import Button from './ui/Button'
 import Dropdown from './ui/Dropdown'
@@ -23,19 +23,22 @@ export default function AppShell({ children }: AppShellProps) {
 
   useEffect(() => {
     const savedWorkspaceId = localStorage.getItem(CURRENT_WORKSPACE_KEY)
-    let ws: Workspace | null = null
+    let selected: Workspace | null = null
 
     if (savedWorkspaceId) {
-      ws = getWorkspace(savedWorkspaceId)
+      const workspace = getWorkspace(savedWorkspaceId)
+      if (workspace) {
+        selected = workspace
+      }
     }
 
-    if (!ws && workspaces.length > 0) {
-      ws = workspaces[0]
+    if (!selected && workspaces.length > 0) {
+      selected = workspaces[0]
     }
 
-    if (ws) {
-      setCurrentWorkspace(ws)
-      localStorage.setItem(CURRENT_WORKSPACE_KEY, ws.id)
+    if (selected) {
+      setCurrentWorkspace(selected)
+      localStorage.setItem(CURRENT_WORKSPACE_KEY, selected.id)
     } else {
       setCurrentWorkspace(null)
     }
