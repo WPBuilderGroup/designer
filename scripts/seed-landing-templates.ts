@@ -51,11 +51,19 @@ async function run() {
     for (const t of templates) {
       await pool.query(
         `
-        insert into templates (name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta)
-        values ($1, $2, $3, $4, $5, $6, $7)
-        on conflict (name) do nothing
+          INSERT INTO templates (name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (name) DO NOTHING
         `,
-        [t.name, 'page', t.html, t.css, [], [], { preview: t.preview }]
+        [
+          t.name,
+          'page',
+          t.html,
+          t.css,
+          JSON.stringify([]), // gjs_components
+          JSON.stringify([]), // gjs_styles
+          JSON.stringify({ preview: t.preview }), // meta
+        ]
       )
     }
 
