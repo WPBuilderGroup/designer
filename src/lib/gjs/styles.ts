@@ -3,11 +3,21 @@
  * Organizes CSS properties into logical sectors similar to design tools
  */
 
+import { logger } from '@/lib/logger'
+import type { Editor } from 'grapesjs'
+
 export interface StyleSector {
   name: string
   open?: boolean
   buildProps?: string[]
-  properties?: any[]
+  properties?: Record<string, unknown>[]
+}
+
+interface StyleManagerLike {
+  getSectors?: () => { reset?: () => void }
+  addSectors?: (config: StyleSector[]) => void
+  addSector?: (id: string, opts: { name: string; open: boolean; properties?: unknown[] }) => void
+  addProperty?: (id: string, prop: unknown) => void
 }
 
 /**
@@ -274,7 +284,7 @@ function toKebab(v?: string): string {
  * Apply the style manager configuration to the GrapesJS editor
  * @param editor - The GrapesJS editor instance
  */
-export function applyStyleManager(editor: any): void {
+export function applyStyleManager(editor: Editor): void {
   if (!editor) {
     console.warn('Editor instance not provided to applyStyleManager')
     return
@@ -282,7 +292,8 @@ export function applyStyleManager(editor: any): void {
 
   try {
     // Get the Style Manager with fallback for different API versions
-    const sm = (editor as any).Styles || (editor as any).StyleManager
+      const extended = editor as unknown as { Styles?: StyleManagerLike; StyleManager?: StyleManagerLike }
+      const sm = extended.Styles || extended.StyleManager
 
     if (!sm) {
       console.warn('Style Manager not found in editor - styles configuration skipped')
@@ -299,12 +310,12 @@ export function applyStyleManager(editor: any): void {
     // Try the legacy addSectors method first (v0.1x)
     if (typeof sm.addSectors === 'function') {
       sm.addSectors(styleManagerConfig)
-      console.log('Style Manager configured successfully with addSectors (legacy API)')
+      logger.info('Style Manager configured successfully with addSectors (legacy API)')
       return
     }
 
     // Fallback to individual sector addition for newer versions
-    console.log('Using fallback method for Style Manager configuration')
+    logger.info('Using fallback method for Style Manager configuration')
 
     for (const sector of styleManagerConfig) {
       try {
@@ -330,8 +341,8 @@ export function applyStyleManager(editor: any): void {
           }
 
           // Add properties individually if they exist
-          if (Array.isArray(props) && typeof sm.addProperty === 'function') {
-            props.forEach((prop: any) => {
+            if (Array.isArray(props) && typeof sm.addProperty === 'function') {
+              props.forEach((prop: unknown) => {
               try {
                 if (typeof prop === 'string') {
                   // Simple property name (buildProps style)
@@ -351,7 +362,7 @@ export function applyStyleManager(editor: any): void {
       }
     }
 
-    console.log('Style Manager configured successfully with fallback method')
+    logger.info('Style Manager configured successfully with fallback method')
   } catch (error) {
     console.error('Failed to apply Style Manager configuration:', error)
   }
