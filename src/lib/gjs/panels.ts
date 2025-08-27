@@ -1,4 +1,6 @@
 import type { Editor } from 'grapesjs'
+import { logger } from '@/lib/logger'
+
 /**
  * GrapesJS Panels and Commands configuration
  * Configures topbar buttons and their corresponding commands
@@ -8,8 +10,9 @@ export interface PanelButton {
   id: string
   command?: string
   className?: string
-  attributes?: Record<string, any>
+  attributes?: Record<string, string>
   label?: string
+  active?: boolean
 }
 
 export interface Panel {
@@ -28,9 +31,8 @@ export const deviceConfigs = {
 
 /**
  * Configure panels and commands for the GrapesJS editor
- * @param editor - The GrapesJS editor instance
  */
-export function applyPanels(editor: any): void {
+export function applyPanels(editor: Editor): void {
   if (!editor) {
     console.warn('Editor instance not provided to applyPanels')
     return
@@ -40,54 +42,46 @@ export function applyPanels(editor: any): void {
     const panelManager = editor.Panels
     const commands = editor.Commands
 
-    // Clear existing panels to start fresh
+    // Clear default panels
     panelManager.removePanel('commands')
     panelManager.removePanel('options')
     panelManager.removePanel('views')
 
-    // Add device switching commands (updated for new device names)
+    // Device switching commands
     commands.add('set-device-desktop', {
-      run: (editor: any) => {
-        editor.setDevice('Desktop')
-        // Dispatch event for UI sync
-        window.dispatchEvent(new CustomEvent('gjs-device-change', {
-          detail: { device: 'desktop' }
-        }))
+      run: (ed: Editor) => {
+        ed.setDevice('Desktop')
+        window.dispatchEvent(new CustomEvent('gjs-device-change', { detail: { device: 'desktop' } }))
       }
     })
 
     commands.add('set-device-tablet', {
-      run: (editor: any) => {
-        editor.setDevice('Tablet')
-        window.dispatchEvent(new CustomEvent('gjs-device-change', {
-          detail: { device: 'tablet' }
-        }))
+      run: (ed: Editor) => {
+        ed.setDevice('Tablet')
+        window.dispatchEvent(new CustomEvent('gjs-device-change', { detail: { device: 'tablet' } }))
       }
     })
 
     commands.add('set-device-mobile', {
-      run: (editor: any) => {
-        editor.setDevice('Mobile')
-        window.dispatchEvent(new CustomEvent('gjs-device-change', {
-          detail: { device: 'mobile' }
-        }))
+      run: (ed: Editor) => {
+        ed.setDevice('Mobile')
+        window.dispatchEvent(new CustomEvent('gjs-device-change', { detail: { device: 'mobile' } }))
       }
     })
 
-    // Enhanced preview command with event dispatch
+    // Preview command
     commands.add('preview', {
-      run: (editor: any) => {
-        editor.runCommand('sw-visibility')
-        window.dispatchEvent(new CustomEvent('gjs-preview-toggle', {
-          detail: { isPreview: !editor.Canvas.getBody().classList.contains('gjs-dashed') }
-        }))
+      run: (ed: Editor) => {
+        ed.runCommand('sw-visibility')
+        const isPreview = !ed.Canvas.getBody().classList.contains('gjs-dashed')
+        window.dispatchEvent(new CustomEvent('gjs-preview-toggle', { detail: { isPreview } }))
       }
     })
 
-    // Fullscreen command
+    // Fullscreen
     commands.add('fullscreen', {
-      run: (editor: any) => {
-        const canvas = editor.Canvas.getElement() as HTMLElement & {
+      run: (ed: Editor) => {
+        const canvas = ed.Canvas.getElement() as HTMLElement & {
           webkitRequestFullscreen?: () => void
           msRequestFullscreen?: () => void
         }
@@ -96,43 +90,43 @@ export function applyPanels(editor: any): void {
           msExitFullscreen?: () => void
         }
         if (!document.fullscreenElement) {
-          if (canvas.requestFullscreen) canvas.requestFullscreen()
-          else if (canvas.webkitRequestFullscreen) canvas.webkitRequestFullscreen()
-          else if (canvas.msRequestFullscreen) canvas.msRequestFullscreen()
+          canvas.requestFullscreen?.() ||
+          canvas.webkitRequestFullscreen?.() ||
+          canvas.msRequestFullscreen?.()
         } else {
-          if (doc.exitFullscreen) doc.exitFullscreen()
-          else if (doc.webkitExitFullscreen) doc.webkitExitFullscreen()
-          else if (doc.msExitFullscreen) doc.msExitFullscreen()
+          doc.exitFullscreen?.() ||
+          doc.webkitExitFullscreen?.() ||
+          doc.msExitFullscreen?.()
         }
       }
     })
 
-    // Clear canvas command
+    // Clear canvas
     commands.add('clear-canvas', {
-      run: (editor: any) => {
+      run: (ed: Editor) => {
         if (confirm('Are you sure you want to clear the canvas? This action cannot be undone.')) {
-          editor.setComponents('')
-          editor.setStyle('')
+          ed.setComponents('')
+          ed.setStyle('')
         }
       }
     })
 
-    // Enhanced undo/redo commands with event dispatch
+    // Undo/Redo with event
     commands.add('core:undo', {
-      run: (editor: any) => {
-        editor.UndoManager.undo()
+      run: (ed: Editor) => {
+        ed.UndoManager.undo()
         window.dispatchEvent(new CustomEvent('gjs-history-change'))
       }
     })
 
     commands.add('core:redo', {
-      run: (editor: any) => {
-        editor.UndoManager.redo()
+      run: (ed: Editor) => {
+        ed.UndoManager.redo()
         window.dispatchEvent(new CustomEvent('gjs-history-change'))
       }
     })
 
-    // Configure topbar panel with custom buttons
+    // Add topbar panels
     panelManager.addPanel({
       id: 'basic-actions',
       buttons: [
@@ -146,7 +140,6 @@ export function applyPanels(editor: any): void {
       ]
     })
 
-    // Add devices panel
     panelManager.addPanel({
       id: 'devices-c',
       buttons: [
@@ -171,7 +164,6 @@ export function applyPanels(editor: any): void {
       ]
     })
 
-    // Add options panel
     panelManager.addPanel({
       id: 'options',
       buttons: [
@@ -208,92 +200,113 @@ export function applyPanels(editor: any): void {
       ]
     })
 
-    // Setup device manager with predefined devices
+    // Devices
     const deviceManager = editor.DeviceManager
     deviceManager.add('Desktop', '100%')
     deviceManager.add('Tablet', '768px', '1024px')
     deviceManager.add('Mobile', '375px', '667px')
 
-    // Listen for history changes to update undo/redo states
+    // Listen for history-related events
     editor.on('component:add component:remove component:update', () => {
       window.dispatchEvent(new CustomEvent('gjs-history-change'))
     })
 
-    console.log('Panels and commands configured successfully')
+    logger.info('Panels and commands configured successfully')
   } catch (error) {
     console.error('Failed to apply panels configuration:', error)
   }
 }
 
-// 'use client' optional for modules used on the client
-function resolveViewEl(view: any): HTMLElement | null {
+/**
+ * Helpers for resolving view elements
+ */
+function resolveViewEl(view: unknown): HTMLElement | null {
   if (!view) return null
-  if ((view as any).el) return (view as any).el
-  if (typeof (view as any).get === 'function') {
-    const v = (view as any).get('el')
-    if (v instanceof HTMLElement) return v
+
+  // Direct el property
+  if ((view as { el?: HTMLElement }).el) {
+    return (view as { el?: HTMLElement }).el ?? null
   }
+
+  // Using get('el') fallback
+  const getter = (view as { get?: (key: string) => unknown }).get
+  if (typeof getter === 'function') {
+    const el = getter('el')
+    if (el instanceof HTMLElement) return el
+  }
+
   return view instanceof HTMLElement ? view : null
 }
 
 function mountInViewsContainer(editor: Editor, el: HTMLElement) {
   const pn = editor.Panels
   if (!pn.getPanel('views-container')) {
-    pn.addPanel({ id: 'views-container', visible: true, content: '<div class="gjs-one-bg gjs-two-color" id="views-wrap" style="height:100%;overflow:auto"></div>' })
+    pn.addPanel({
+      id: 'views-container',
+      visible: true,
+      content: '<div class="gjs-one-bg gjs-two-color" id="views-wrap" style="height:100%;overflow:auto"></div>'
+    })
   }
+
   const panel = pn.getPanel('views-container')
-  const wrap = (panel as any)?.get('contentEl')?.querySelector('#views-wrap') as HTMLElement | null
+  const contentEl = panel?.get?.('contentEl') as HTMLElement | null
+  const wrap = contentEl?.querySelector<HTMLElement>('#views-wrap') || null
+
   if (wrap) {
     wrap.innerHTML = ''
     wrap.appendChild(el)
   }
 }
 
+/**
+ * Register commands to open GrapesJS views (layers, blocks, assets, styles)
+ */
 export function registerViewCommands(editor: Editor) {
-  // LAYERS
+  const pn = editor.Panels
+
+  // Define view commands
   editor.Commands.add('open-layers', {
     run(ed: Editor) {
-      const view = (ed as any).Layers?.render?.()
+      const view = ed.Layers?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },
   })
 
-  // BLOCKS
   editor.Commands.add('open-blocks', {
     run(ed: Editor) {
-      const view = (ed as any).Blocks?.render?.()
+      const view = ed.Blocks?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },
   })
 
-  // ASSETS
   editor.Commands.add('open-assets', {
     run(ed: Editor) {
-      const view = (ed as any).Assets?.render?.()
+      const view = ed.Assets?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },
   })
 
-  // STYLES
   editor.Commands.add('open-styles', {
     run(ed: Editor) {
-      const view = (ed as any).Styles?.render?.()
+      const view = ed.Styles?.render?.()
       const el = resolveViewEl(view)
       if (el) mountInViewsContainer(ed, el)
     },
   })
 
-  // Tiny buttons panel to trigger views
-  const pn = editor.Panels
+  // Add buttons to trigger views
   if (!pn.getPanel('views')) {
-    pn.addPanel({ id: 'views', buttons: [
-      { id: 'btn-layers', command: 'open-layers', className: 'gjs-pn-btn', label: 'Layers' },
-      { id: 'btn-blocks', command: 'open-blocks', className: 'gjs-pn-btn', label: 'Blocks' },
-      { id: 'btn-assets', command: 'open-assets', className: 'gjs-pn-btn', label: 'Assets' },
-      { id: 'btn-styles', command: 'open-styles', className: 'gjs-pn-btn', label: 'Styles' },
-    ]})
+    pn.addPanel({
+      id: 'views',
+      buttons: [
+        { id: 'btn-layers', command: 'open-layers', className: 'gjs-pn-btn', label: 'Layers' },
+        { id: 'btn-blocks', command: 'open-blocks', className: 'gjs-pn-btn', label: 'Blocks' },
+        { id: 'btn-assets', command: 'open-assets', className: 'gjs-pn-btn', label: 'Assets' },
+        { id: 'btn-styles', command: 'open-styles', className: 'gjs-pn-btn', label: 'Styles' }
+      ]
+    })
   }
 }
