@@ -6,6 +6,7 @@ import type {
   GjsReadyDetail,
   ManagerView,
 } from '@/types/gjs'
+import { logger } from '@/lib/logger'
 
 // Helper to safely get StyleManager element after editor loaded
 function resolveStyleEl(ed?: GjsEditor): HTMLElement | null {
@@ -26,29 +27,18 @@ export default function RightInspector() {
   const stylesContainerRef = useRef<HTMLDivElement>(null)
   const propertiesContainerRef = useRef<HTMLDivElement>(null)
 
-  const tabs = [
-    { id: 'styles', label: 'Styles' },
-    { id: 'properties', label: 'Properties' }
-  ]
-
   useEffect(() => {
-    // Listen for GrapesJS ready event
     const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
       const { editor: editorInstance } = event.detail
       setEditor(editorInstance)
 
-      // Mount the style manager and trait manager after editor is ready
       setTimeout(() => {
         mountManagers(editorInstance)
       }, 100)
     }
 
-    // Listen for component selection changes
     const handleComponentSelect = () => {
-      // Refresh the managers when component selection changes
-      if (editor) {
-        refreshManagers()
-      }
+      refreshManagers()
     }
 
     window.addEventListener('gjs-ready', handleGjsReady as EventListener)
@@ -58,105 +48,94 @@ export default function RightInspector() {
       window.removeEventListener('gjs-ready', handleGjsReady as EventListener)
       window.removeEventListener('gjs-component-select', handleComponentSelect)
     }
-  }, [editor])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const mountManagers = (editorInstance: GjsEditor) => {
     try {
       // Mount Style Manager
-      const stylesContainer = stylesContainerRef.current;
-      const smEl = resolveStyleEl(editorInstance);
+      const stylesContainer = stylesContainerRef.current
+      const smEl = resolveStyleEl(editorInstance)
       if (stylesContainer) {
-        stylesContainer.innerHTML = '';
+        stylesContainer.innerHTML = ''
         if (smEl) {
-          stylesContainer.appendChild(smEl);
-          console.log('Style Manager mounted');
+          stylesContainer.appendChild(smEl)
+          logger.info('Style Manager mounted')
         } else {
-          console.warn('[GrapesJS] StyleManager element not available');
+          logger.warn('StyleManager element not available')
         }
       }
 
       // Mount Trait Manager (Properties)
-      const propertiesContainer = propertiesContainerRef.current;
+      const propertiesContainer = propertiesContainerRef.current
+      const tm = editorInstance.TraitManager
+      const tmView = tm.render()
+      const tmEl = tmView.el
+
       if (propertiesContainer) {
-        const tm = editorInstance.TraitManager
-        const tmView = tm.render()
-        const tmEl = tmView.el
-        propertiesContainer.innerHTML = '';
+        propertiesContainer.innerHTML = ''
         if (tmEl instanceof HTMLElement) {
-          propertiesContainer.appendChild(tmEl);
-          console.log('Trait Manager mounted');
+          propertiesContainer.appendChild(tmEl)
+          logger.info('Trait Manager mounted')
         } else {
-          console.warn('[GrapesJS] TraitManager element not available');
+          logger.warn('TraitManager element not available')
         }
       }
 
-      // Listen for component selection to update managers
-      editorInstance.on('component:selected', () => {
-        setTimeout(() => refreshManagers(), 50)
-      })
-
-      editorInstance.on('component:deselected', () => {
-        setTimeout(() => refreshManagers(), 50)
-      })
-
+      // Refresh managers on selection change
+      editorInstance.on('component:selected', () => setTimeout(refreshManagers, 50))
+      editorInstance.on('component:deselected', () => setTimeout(refreshManagers, 50))
     } catch (error) {
-      console.error('Failed to mount managers:', error)
+      logger.error('Failed to mount managers', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 
   const refreshManagers = () => {
     if (!editor) return
-
     try {
-      // Refresh Style Manager
-      const styleManager = editor.StyleManager
-      if (styleManager && stylesContainerRef.current) {
-        styleManager.render()
-      }
-
-      // Refresh Trait Manager
-      const traitManager = editor.TraitManager
-      if (traitManager && propertiesContainerRef.current) {
-        traitManager.render()
-      }
+      ;(editor as any).StyleManager?.render?.()
+      editor.TraitManager?.render?.()
     } catch (error) {
-      console.warn('Failed to refresh managers:', error)
+      logger.warn('Failed to refresh managers', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
   }
 
-  const handleTabClick = (tabId: 'styles' | 'properties') => {
-    setActiveTab(tabId)
-
-    // Refresh the active manager when switching tabs
+  const handleTabClick = (tab: 'styles' | 'properties') => {
+    setActiveTab(tab)
     setTimeout(() => {
-      if (tabId === 'styles' && editor) {
-        editor.StyleManager.render()
-      } else if (tabId === 'properties' && editor) {
-        editor.TraitManager.render()
+      if (!editor) return
+      if (tab === 'styles') {
+        ;(editor as any).StyleManager?.render?.()
+      } else {
+        editor.TraitManager?.render?.()
       }
     }, 50)
   }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Tab Headers */}
+      {/* Tabs */}
       <div className="flex border-b border-gray-200 bg-white">
-        {tabs.map((tab) => (
+        {['styles', 'properties'].map((tab) => (
           <button
-            key={tab.id}
-            onClick={() => handleTabClick(tab.id as 'styles' | 'properties')}
+            key={tab}
+            onClick={() => handleTabClick(tab as 'styles' | 'properties')}
             className={`flex-1 px-4 py-3 text-sm font-medium transition-colors ${
-              activeTab === tab.id
+              activeTab === tab
                 ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50'
                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
             }`}
           >
-            {tab.label}
+            {tab === 'styles' ? 'Styles' : 'Properties'}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'styles' && (
           <div className="h-full">
@@ -164,7 +143,6 @@ export default function RightInspector() {
               ref={stylesContainerRef}
               className="overflow-auto h-[calc(100vh-48px)] p-2"
             >
-              {/* Style Manager will be mounted here */}
               {!editor && (
                 <div className="text-sm text-gray-500 p-4 text-center">
                   Loading Style Manager...
@@ -180,7 +158,6 @@ export default function RightInspector() {
               ref={propertiesContainerRef}
               className="overflow-auto h-[calc(100vh-48px)] p-2"
             >
-              {/* Trait Manager will be mounted here */}
               {!editor && (
                 <div className="text-sm text-gray-500 p-4 text-center">
                   Loading Properties...
