@@ -10,7 +10,14 @@ interface SeoPayload {
 // Update page by id with grapesJson and optional seo, return {page}
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
   const { id } = params
-  const body = (await req.json().catch(() => ({}))) as Record<string, unknown>
+
+  let body: Record<string, unknown> = {}
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+  }
+
   const grapesJson = body['grapesJson']
   const seoRaw = body['seo']
 
@@ -32,27 +39,28 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   await query(
     `update pages set
-      gjs_html=$2,
-      gjs_css=$3,
-      gjs_components=$4,
-      gjs_styles=$5,
-      updated_at=now()
-     where id=$1`,
+      gjs_html = $2,
+      gjs_css = $3,
+      gjs_components = $4,
+      gjs_styles = $5,
+      updated_at = now()
+     where id = $1`,
     [id, gHtml, gCss, gComp, gStyles]
   )
 
-  // Optional: update SEO if column exists (future-proof, ignore if fails)
+  // Optional SEO update (safe to fail)
   if (seo !== null) {
     try {
-      await query('update pages set seo=$2 where id=$1', [id, seo])
+      await query('update pages set seo = $2 where id = $1', [id, seo])
     } catch {
-      // ignore if column not present
+      // ignore error, e.g. missing 'seo' column
     }
   }
 
   const { rows } = await query<{ id: string; path: string; updated_at: string }>(
-    'select id, slug as path, updated_at from pages where id=$1',
+    'select id, slug as path, updated_at from pages where id = $1',
     [id]
   )
+
   return NextResponse.json({ page: rows[0] })
 }

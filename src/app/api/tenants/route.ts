@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { query, Tenant } from '@/lib/db'
+import { safeJson } from '@/lib/api'
 
-// Simple schema validation
 const tenantSchema = {
-  parse(data: unknown) {
+  parse(data: unknown): { name: string; slug: string } {
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid JSON payload')
     }
@@ -30,7 +30,7 @@ const tenantSchema = {
 export async function GET() {
   try {
     const { rows } = await query<Tenant>(
-      'select id, slug, name from tenants order by created_at desc'
+      'SELECT id, slug, name FROM tenants ORDER BY created_at DESC'
     )
     return NextResponse.json(rows)
   } catch (error) {
@@ -46,20 +46,18 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
-  let body: unknown
+  const [body, jsonError] = await safeJson(req)
+  if (jsonError) return jsonError
 
-  try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
+  let validated: { name: string; slug: string }
 
-  let validated
   try {
     validated = tenantSchema.parse(body)
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Invalid request body' },
+      {
+        error: error instanceof Error ? error.message : 'Invalid request body',
+      },
       { status: 400 }
     )
   }
@@ -67,14 +65,16 @@ export async function POST(req: NextRequest) {
   const { name, slug } = validated
 
   try {
-    await query('insert into tenants(slug, name) values($1,$2)', [slug, name])
+    await query('INSERT INTO tenants(slug, name) VALUES($1, $2)', [slug, name])
     return NextResponse.json({ ok: true })
   } catch (error: any) {
     console.error('Error creating tenant:', error)
 
-    // PostgreSQL unique_violation
-    if (error && typeof error === 'object' && 'code' in error && error.code === '23505') {
-      return NextResponse.json({ error: 'Tenant slug already exists' }, { status: 409 })
+    if (error?.code === '23505') {
+      return NextResponse.json(
+        { error: 'Tenant slug already exists' },
+        { status: 409 }
+      )
     }
 
     return NextResponse.json(
