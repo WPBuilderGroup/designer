@@ -8,7 +8,6 @@ const levelOrder: Record<LogLevel, number> = {
   error: 3,
 }
 
-// Only log debug/info in development; warn/error in production
 const currentLevel: LogLevel = process.env.NODE_ENV === 'development' ? 'debug' : 'warn'
 
 function log(level: LogLevel, message: string, meta?: LogMeta) {

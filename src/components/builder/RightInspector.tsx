@@ -1,140 +1,142 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react';
-import type { GjsEditor, GjsReadyDetail, GjsStyleManager } from '@/types/gjs';
+import { useState, useEffect, useRef } from 'react'
+import type { GjsEditor, GjsReadyDetail } from '@/types/gjs'
+import { logger } from '@/lib/logger'
 
-// Helper to safely get StyleManager element after editor loaded
+/** Safely resolve the StyleManager element after the editor has loaded */
 function resolveStyleEl(ed?: GjsEditor): HTMLElement | null {
-  if (!ed) return null;
-  const sm: GjsStyleManager | undefined = ed.StyleManager ?? ed.Styles;
-  if (!sm) return null;
-  const isLoaded = typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.();
-  if (!isLoaded) return null;
-  const view = typeof sm.getView === 'function' ? sm.getView() : undefined;
-  const el = view?.el ?? sm.render().el;
-  return el instanceof HTMLElement ? el : null;
+  if (!ed) return null
+  // Some setups expose StyleManager as `Styles`
+  const sm: any = (ed as any).StyleManager ?? (ed as any).Styles
+  if (!sm) return null
+
+  const isLoaded =
+    typeof (ed as any).isLoaded === 'function'
+      ? (ed as any).isLoaded()
+      : !!(ed as any).getModel?.()
+  if (!isLoaded) return null
+
+  const view = typeof sm.getView === 'function' ? sm.getView() : sm.render?.()
+  const el = view?.el ?? sm.render?.()?.el
+  return el instanceof HTMLElement ? el : null
 }
 
 export default function RightInspector() {
-  const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles');
-  const [editor, setEditor] = useState<GjsEditor | null>(null);
-  const stylesContainerRef = useRef<HTMLDivElement>(null);
-  const propertiesContainerRef = useRef<HTMLDivElement>(null);
+  const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles')
+  const [editor, setEditor] = useState<GjsEditor | null>(null)
 
-  const tabs = [
-    { id: 'styles', label: 'Styles' },
-    { id: 'properties', label: 'Properties' }
-  ]
+  const stylesContainerRef = useRef<HTMLDivElement>(null)
+  const propertiesContainerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    // Listen for GrapesJS ready event
     const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
-      const { editor: editorInstance } = event.detail;
-      setEditor(editorInstance);
+      const { editor: editorInstance } = event.detail
+      setEditor(editorInstance)
 
-      // Mount the style manager and trait manager after editor is ready
+      // Mount managers slightly after ready to ensure views exist
       setTimeout(() => {
-        mountManagers(editorInstance);
-      }, 100);
-    };
+        mountManagers(editorInstance)
+      }, 100)
+    }
 
-    // Listen for component selection changes
     const handleComponentSelect = () => {
-      // Refresh the managers when component selection changes
-      if (editor) {
-        refreshManagers();
-      }
-    };
+      // Refresh managers when component selection changes
+      refreshManagers()
+    }
 
-    window.addEventListener('gjs-ready', handleGjsReady as EventListener);
-    window.addEventListener('gjs-component-select', handleComponentSelect);
+    window.addEventListener('gjs-ready', handleGjsReady as EventListener)
+    window.addEventListener('gjs-component-select', handleComponentSelect)
 
     return () => {
-      window.removeEventListener('gjs-ready', handleGjsReady as EventListener);
-      window.removeEventListener('gjs-component-select', handleComponentSelect);
-    };
-  }, [editor]);
+      window.removeEventListener('gjs-ready', handleGjsReady as EventListener)
+      window.removeEventListener('gjs-component-select', handleComponentSelect)
+    }
+    // Don't depend on `editor` here; we refresh via handlers
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const mountManagers = (editorInstance: GjsEditor) => {
     try {
-      // Mount Style Manager
-      const stylesContainer = stylesContainerRef.current;
-      const smEl = resolveStyleEl(editorInstance);
+      // Style Manager
+      const stylesContainer = stylesContainerRef.current
+      const smEl = resolveStyleEl(editorInstance)
       if (stylesContainer) {
-        stylesContainer.innerHTML = '';
+        stylesContainer.innerHTML = ''
         if (smEl) {
-          stylesContainer.appendChild(smEl);
-          console.log('Style Manager mounted');
+          stylesContainer.appendChild(smEl)
+          logger.info('[GrapesJS] Style Manager mounted')
         } else {
-          console.warn('[GrapesJS] StyleManager element not available');
+          logger.warn('[GrapesJS] StyleManager element not available')
         }
       }
 
-      // Mount Trait Manager (Properties)
-      const propertiesContainer = propertiesContainerRef.current;
+      // Trait Manager (Properties)
+      const propertiesContainer = propertiesContainerRef.current
       if (propertiesContainer) {
-        const tmEl = editorInstance.TraitManager.render().el;
-        propertiesContainer.innerHTML = '';
+        const tmEl = editorInstance.TraitManager?.render()?.el
+        propertiesContainer.innerHTML = ''
         if (tmEl instanceof HTMLElement) {
-          propertiesContainer.appendChild(tmEl);
-          console.log('Trait Manager mounted');
+          propertiesContainer.appendChild(tmEl)
+          logger.info('[GrapesJS] Trait Manager mounted')
         } else {
-          console.warn('[GrapesJS] TraitManager element not available');
+          logger.warn('[GrapesJS] TraitManager element not available')
         }
       }
 
-      // Listen for component selection to update managers
+      // Update managers on selection changes
       editorInstance.on('component:selected', () => {
-        setTimeout(() => refreshManagers(), 50);
-      });
-
+        setTimeout(() => refreshManagers(), 50)
+      })
       editorInstance.on('component:deselected', () => {
-        setTimeout(() => refreshManagers(), 50);
-      });
-
+        setTimeout(() => refreshManagers(), 50)
+      })
     } catch (error) {
-      console.error('Failed to mount managers:', error);
+      logger.error('Failed to mount managers', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
-  };
+  }
 
   const refreshManagers = () => {
-    if (!editor) return;
-
+    if (!editor) return
     try {
-      // Refresh Style Manager
-      const styleManager = editor.StyleManager;
-      if (styleManager && stylesContainerRef.current) {
-        styleManager.render();
+      // Re-render style manager
+      if ((editor as any).StyleManager) {
+        ;(editor as any).StyleManager.render()
       }
-
-      // Refresh Trait Manager
-      const traitManager = editor.TraitManager;
-      if (traitManager && propertiesContainerRef.current) {
-        traitManager.render();
+      // Re-render trait manager
+      if (editor.TraitManager) {
+        editor.TraitManager.render()
       }
     } catch (error) {
-      console.warn('Failed to refresh managers:', error);
+      logger.warn('Failed to refresh managers', {
+        error: error instanceof Error ? error.message : String(error),
+      })
     }
-  };
+  }
 
   const handleTabClick = (tabId: 'styles' | 'properties') => {
-    setActiveTab(tabId);
-
-    // Refresh the active manager when switching tabs
+    setActiveTab(tabId)
+    // Refresh active manager after switching
     setTimeout(() => {
-      if (tabId === 'styles' && editor) {
-        editor.StyleManager.render();
-      } else if (tabId === 'properties' && editor) {
-        editor.TraitManager.render();
+      if (!editor) return
+      if (tabId === 'styles') {
+        ;(editor as any).StyleManager?.render?.()
+      } else {
+        editor.TraitManager?.render?.()
       }
-    }, 50);
-  };
+    }, 50)
+  }
 
   return (
     <div className="h-full flex flex-col">
-      {/* Tab Headers */}
+      {/* Tabs */}
       <div className="flex border-b border-gray-200 bg-white">
-        {tabs.map((tab) => (
+        {[
+          { id: 'styles', label: 'Styles' },
+          { id: 'properties', label: 'Properties' },
+        ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => handleTabClick(tab.id as 'styles' | 'properties')}
@@ -149,7 +151,7 @@ export default function RightInspector() {
         ))}
       </div>
 
-      {/* Tab Content */}
+      {/* Content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'styles' && (
           <div className="h-full">
@@ -157,7 +159,6 @@ export default function RightInspector() {
               ref={stylesContainerRef}
               className="overflow-auto h-[calc(100vh-48px)] p-2"
             >
-              {/* Style Manager will be mounted here */}
               {!editor && (
                 <div className="text-sm text-gray-500 p-4 text-center">
                   Loading Style Manager...
@@ -173,7 +174,6 @@ export default function RightInspector() {
               ref={propertiesContainerRef}
               className="overflow-auto h-[calc(100vh-48px)] p-2"
             >
-              {/* Trait Manager will be mounted here */}
               {!editor && (
                 <div className="text-sm text-gray-500 p-4 text-center">
                   Loading Properties...
