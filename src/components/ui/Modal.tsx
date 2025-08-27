@@ -1,11 +1,12 @@
 import { Fragment } from 'react'
+import type { ReactNode } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 
 export interface ModalProps {
   open: boolean
   onClose: () => void
   title?: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
 const Modal = ({ open, onClose, title, children }: ModalProps) => {

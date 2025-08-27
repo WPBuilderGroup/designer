@@ -3,6 +3,9 @@
  * Manages the media library and sample assets
  */
 
+import { logger } from '@/lib/logger'
+import type { Editor } from 'grapesjs'
+
 /**
  * Sample assets configuration
  * These assets will be available in the Assets Manager
@@ -213,7 +216,7 @@ export const fallbackAssets = [
  * Configure and populate the Assets Manager
  * @param editor - The GrapesJS editor instance
  */
-export function configureAssets(editor: any): void {
+export function configureAssets(editor: Editor): void {
   if (!editor) {
     console.warn('Editor instance not provided to configureAssets')
     return
@@ -232,21 +235,21 @@ export function configureAssets(editor: any): void {
     assetManager.add(assetsToAdd)
 
     // Configure asset manager behavior
-    editor.on('asset:add', (asset: any) => {
-      console.log('Asset added:', asset.get('src'))
+    editor.on('asset:add', (asset: { get: (prop: string) => string }) => {
+      logger.info('Asset added:', asset.get('src'))
     })
 
     // Configure drag and drop for assets
-    editor.on('canvas:dragover', (e: any) => {
+    editor.on('canvas:dragover', (e: DragEvent) => {
       e.preventDefault()
     })
 
-    editor.on('canvas:drop', (e: any) => {
+    editor.on('canvas:drop', (e: DragEvent) => {
       e.preventDefault()
       // Handle file drops here if needed
     })
 
-    console.log('Assets Manager configured successfully')
+    logger.info('Assets Manager configured successfully')
   } catch (error) {
     console.error('Failed to configure Assets Manager:', error)
   }
