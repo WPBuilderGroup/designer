@@ -1,18 +1,19 @@
 import { Fragment } from 'react'
+import type { ReactNode } from 'react'
 import { Menu, Transition } from '@headlessui/react'
 import { cn } from '../../lib/utils'
 
 export interface DropdownItem {
   label: string
   onClick: () => void
-  icon?: React.ReactNode
+  icon?: ReactNode
   disabled?: boolean
   selected?: boolean
   type?: 'separator' | 'item'
 }
 
 export interface DropdownProps {
-  trigger: React.ReactNode
+  trigger: ReactNode
   items: DropdownItem[]
   align?: 'left' | 'right'
 }
