@@ -139,6 +139,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       }
 
       editorRef.current = null;
+
       if (process.env.NODE_ENV === 'development' && window.__gjs === editor) {
         delete window.__gjs;
       }

@@ -48,7 +48,7 @@ export default function WorkspaceDetailPage() {
         alert('Workspace renamed successfully!')
       } else {
         alert('Failed to rename workspace')
-        setWorkspaceName(workspace.name) // Reset to original name
+        setWorkspaceName(workspace.name)
       }
     } catch (error) {
       console.error('Error renaming workspace:', error)
@@ -108,7 +108,7 @@ export default function WorkspaceDetailPage() {
             </svg>
           </div>
           <h1 className="text-xl font-semibold text-gray-900 mb-2">Workspace Not Found</h1>
-            <p className="text-gray-600 mb-6">The workspace you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
+          <p className="text-gray-600 mb-6">The workspace you&apos;re looking for doesn&apos;t exist or has been deleted.</p>
           <Button onClick={() => router.push('/workspaces')}>
             Back to Workspaces
           </Button>

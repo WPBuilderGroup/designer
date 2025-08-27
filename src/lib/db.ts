@@ -1,4 +1,3 @@
-// lib/db.ts
 import { Pool, PoolClient } from 'pg'
 import { logger } from '@/lib/logger'
 
@@ -114,6 +113,8 @@ export async function closePool(): Promise<void> {
   }
 }
 
+// --- Interfaces ---
+
 export interface GjsComponent {
   type: string
   components?: GjsComponent[]
@@ -156,10 +157,21 @@ export interface ProjectWithPageCount extends Project {
   page_count: number
 }
 
+export interface GrapesJSPageContent {
+  'gjs-html'?: string
+  'gjs-css'?: string
+  'gjs-components'?: GjsComponent[]
+  'gjs-styles'?: GjsStyle[]
+}
+
+// --- Queries ---
+
 export async function getPageData(projectSlug: string, pageSlug: string): Promise<PageData | null> {
   try {
-    const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
-    const projectResult = await query<{ id: string }>(projectQuery, [projectSlug])
+    const projectResult = await query<{ id: string }>(
+      'SELECT id FROM projects WHERE slug = $1 LIMIT 1',
+      [projectSlug]
+    )
 
     if (projectResult.rows.length === 0) {
       logger.warn(`Project not found: ${projectSlug}`)
@@ -168,13 +180,11 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
 
     const projectId = projectResult.rows[0].id
 
-    const pageQuery = `
-      SELECT id, project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at
-      FROM pages 
-      WHERE project_id = $1 AND slug = $2
-      LIMIT 1
-    `
-    const pageResult = await query<PageData>(pageQuery, [projectId, pageSlug])
+    const pageResult = await query<PageData>(
+      `SELECT id, project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at
+       FROM pages WHERE project_id = $1 AND slug = $2 LIMIT 1`,
+      [projectId, pageSlug]
+    )
 
     if (pageResult.rows.length === 0) {
       logger.warn(`Page not found: ${projectSlug}/${pageSlug}`)
@@ -188,13 +198,6 @@ export async function getPageData(projectSlug: string, pageSlug: string): Promis
   }
 }
 
-export interface GrapesJSPageContent {
-  'gjs-html'?: string
-  'gjs-css'?: string
-  'gjs-components'?: GjsComponent[]
-  'gjs-styles'?: GjsStyle[]
-}
-
 export async function upsertPageData(
   projectSlug: string,
   pageSlug: string,
@@ -202,8 +205,10 @@ export async function upsertPageData(
 ): Promise<boolean> {
   try {
     return await transaction(async (client) => {
-      const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
-      const projectResult = await client.query<{ id: string }>(projectQuery, [projectSlug])
+      const projectResult = await client.query<{ id: string }>(
+        'SELECT id FROM projects WHERE slug = $1 LIMIT 1',
+        [projectSlug]
+      )
 
       if (projectResult.rows.length === 0) {
         logger.warn(`Project not found: ${projectSlug}`)
@@ -212,27 +217,26 @@ export async function upsertPageData(
 
       const projectId = projectResult.rows[0].id
 
-      const upsertQuery = `
-        INSERT INTO pages (project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, NOW())
-        ON CONFLICT (project_id, slug)
-        DO UPDATE SET
-          gjs_html = EXCLUDED.gjs_html,
-          gjs_css = EXCLUDED.gjs_css,
-          gjs_components = EXCLUDED.gjs_components,
-          gjs_styles = EXCLUDED.gjs_styles,
-          updated_at = NOW()
-        RETURNING id
-      `
-
-      const result = await client.query(upsertQuery, [
-        projectId,
-        pageSlug,
-        data['gjs-html'] ?? null,
-        data['gjs-css'] ?? null,
-        data['gjs-components'] ? JSON.stringify(data['gjs-components']) : null,
-        data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null,
-      ])
+      const result = await client.query(
+        `INSERT INTO pages (project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, NOW())
+         ON CONFLICT (project_id, slug)
+         DO UPDATE SET
+           gjs_html = EXCLUDED.gjs_html,
+           gjs_css = EXCLUDED.gjs_css,
+           gjs_components = EXCLUDED.gjs_components,
+           gjs_styles = EXCLUDED.gjs_styles,
+           updated_at = NOW()
+         RETURNING id`,
+        [
+          projectId,
+          pageSlug,
+          data['gjs-html'] ?? null,
+          data['gjs-css'] ?? null,
+          data['gjs-components'] ? JSON.stringify(data['gjs-components']) : null,
+          data['gjs-styles'] ? JSON.stringify(data['gjs-styles']) : null,
+        ]
+      )
 
       logger.info(`Page upserted successfully: ${projectSlug}/${pageSlug}`)
       return result.rows.length > 0
@@ -245,25 +249,21 @@ export async function upsertPageData(
 
 export async function getProjectsByWorkspace(workspaceSlug: string): Promise<ProjectWithPageCount[]> {
   try {
-    const query_text = `
-      SELECT p.id, p.tenant_id, p.slug, p.name, p.created_at,
-             COUNT(pages.id) as page_count
-      FROM projects p
-      JOIN tenants t ON p.tenant_id = t.id
-      LEFT JOIN pages ON pages.project_id = p.id
-      WHERE t.slug = $1
-      GROUP BY p.id, p.tenant_id, p.slug, p.name, p.created_at
-      ORDER BY p.created_at DESC
-    `
-    const result = await query<Project & { page_count: string }>(query_text, [workspaceSlug])
+    const result = await query<Project & { page_count: string }>(
+      `SELECT p.id, p.tenant_id, p.slug, p.name, p.created_at,
+              COUNT(pages.id) as page_count
+       FROM projects p
+       JOIN tenants t ON p.tenant_id = t.id
+       LEFT JOIN pages ON pages.project_id = p.id
+       WHERE t.slug = $1
+       GROUP BY p.id, p.tenant_id, p.slug, p.name, p.created_at
+       ORDER BY p.created_at DESC`,
+      [workspaceSlug]
+    )
 
-    return result.rows.map<ProjectWithPageCount>((row) => ({
-      id: row.id,
-      tenant_id: row.tenant_id,
-      slug: row.slug,
-      name: row.name,
-      created_at: row.created_at,
-      page_count: Number.parseInt(row.page_count, 10) || 0,
+    return result.rows.map((row) => ({
+      ...row,
+      page_count: Number(row.page_count) || 0,
     }))
   } catch (error) {
     logger.error('Error getting projects by workspace:', error)
@@ -278,40 +278,33 @@ export async function createProject(
 ): Promise<Project | null> {
   try {
     return await transaction(async (client) => {
-      const tenantQuery = `SELECT id FROM tenants WHERE slug = $1 LIMIT 1`
-      const tenantResult = await client.query<{ id: string }>(tenantQuery, [workspaceSlug])
+      const tenantResult = await client.query<{ id: string }>(
+        'SELECT id FROM tenants WHERE slug = $1 LIMIT 1',
+        [workspaceSlug]
+      )
 
       let tenantId: string
       if (tenantResult.rows.length === 0) {
-        const createTenantQuery = `
-          INSERT INTO tenants (slug, name, created_at) 
-          VALUES ($1, $2, NOW()) 
-          RETURNING id
-        `
-        const newTenantResult = await client.query<{ id: string }>(createTenantQuery, [
-          workspaceSlug,
-          workspaceSlug,
-        ])
+        const newTenantResult = await client.query<{ id: string }>(
+          `INSERT INTO tenants (slug, name, created_at)
+           VALUES ($1, $2, NOW())
+           RETURNING id`,
+          [workspaceSlug, workspaceSlug]
+        )
         tenantId = newTenantResult.rows[0].id
         logger.info(`Created new tenant: ${workspaceSlug}`)
       } else {
         tenantId = tenantResult.rows[0].id
       }
 
-      const createProjectQuery = `
-        INSERT INTO projects (tenant_id, slug, name, created_at)
-        VALUES ($1, $2, $3, NOW())
-        RETURNING id, tenant_id, slug, name, created_at
-      `
-      const projectResult = await client.query<Project>(createProjectQuery, [
-        tenantId,
-        projectSlug,
-        projectName,
-      ])
+      const projectResult = await client.query<Project>(
+        `INSERT INTO projects (tenant_id, slug, name, created_at)
+         VALUES ($1, $2, $3, NOW())
+         RETURNING id, tenant_id, slug, name, created_at`,
+        [tenantId, projectSlug, projectName]
+      )
 
-      if (projectResult.rows.length === 0) {
-        return null
-      }
+      if (projectResult.rows.length === 0) return null
 
       logger.info(`Project created successfully: ${projectSlug}`)
       return projectResult.rows[0]
@@ -324,8 +317,10 @@ export async function createProject(
 
 export async function getPagesByProject(projectSlug: string): Promise<(PageData & { has_content: boolean })[]> {
   try {
-    const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
-    const projectResult = await query<{ id: string }>(projectQuery, [projectSlug])
+    const projectResult = await query<{ id: string }>(
+      'SELECT id FROM projects WHERE slug = $1 LIMIT 1',
+      [projectSlug]
+    )
 
     if (projectResult.rows.length === 0) {
       throw new Error(`Project not found: ${projectSlug}`)
@@ -333,19 +328,16 @@ export async function getPagesByProject(projectSlug: string): Promise<(PageData 
 
     const projectId = projectResult.rows[0].id
 
-    const pagesQuery = `
-      SELECT id, project_id, slug, updated_at,
-             CASE 
-               WHEN gjs_html IS NOT NULL AND gjs_html != '' THEN true
-               ELSE false
-             END as has_content
-      FROM pages 
-      WHERE project_id = $1
-      ORDER BY 
-        CASE WHEN slug = 'home' THEN 0 ELSE 1 END,
-        updated_at DESC
-    `
-    const pagesResult = await query<PageData & { has_content: boolean }>(pagesQuery, [projectId])
+    const pagesResult = await query<PageData & { has_content: boolean }>(
+      `SELECT id, project_id, slug, updated_at,
+              CASE WHEN gjs_html IS NOT NULL AND gjs_html != '' THEN true ELSE false END as has_content
+       FROM pages
+       WHERE project_id = $1
+       ORDER BY 
+         CASE WHEN slug = 'home' THEN 0 ELSE 1 END,
+         updated_at DESC`,
+      [projectId]
+    )
 
     return pagesResult.rows
   } catch (error) {
@@ -357,8 +349,10 @@ export async function getPagesByProject(projectSlug: string): Promise<(PageData 
 export async function createPage(projectSlug: string, pageSlug: string): Promise<PageData | null> {
   try {
     return await transaction(async (client) => {
-      const projectQuery = `SELECT id FROM projects WHERE slug = $1 LIMIT 1`
-      const projectResult = await client.query<{ id: string }>(projectQuery, [projectSlug])
+      const projectResult = await client.query<{ id: string }>(
+        'SELECT id FROM projects WHERE slug = $1 LIMIT 1',
+        [projectSlug]
+      )
 
       if (projectResult.rows.length === 0) {
         throw new Error(`Project not found: ${projectSlug}`)
@@ -366,16 +360,14 @@ export async function createPage(projectSlug: string, pageSlug: string): Promise
 
       const projectId = projectResult.rows[0].id
 
-      const createPageQuery = `
-        INSERT INTO pages (project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at)
-        VALUES ($1, $2, '', '', '[]', '[]', NOW())
-        RETURNING id, project_id, slug, updated_at
-      `
-      const pageResult = await client.query<PageData>(createPageQuery, [projectId, pageSlug])
+      const pageResult = await client.query<PageData>(
+        `INSERT INTO pages (project_id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at)
+         VALUES ($1, $2, '', '', '[]', '[]', NOW())
+         RETURNING id, project_id, slug, updated_at`,
+        [projectId, pageSlug]
+      )
 
-      if (pageResult.rows.length === 0) {
-        return null
-      }
+      if (pageResult.rows.length === 0) return null
 
       logger.info(`Page created successfully: ${pageSlug}`)
       return pageResult.rows[0]

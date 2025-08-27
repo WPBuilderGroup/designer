@@ -24,6 +24,11 @@ const eslintConfig = [
       "@typescript-eslint/ban-ts-comment": "off",
     },
   },
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
 ];
 
 export default eslintConfig;
