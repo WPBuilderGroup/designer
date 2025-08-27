@@ -1,5 +1,8 @@
 declare module 'grapesjs-preset-webpage' {
-  import type { PluginFunction } from 'grapesjs';
-  const plugin: PluginFunction;
-  export default plugin;
+  import type { Editor } from 'grapesjs';
+
+  export default function presetWebpage(
+    editor: Editor,
+    opts?: Record<string, unknown>
+  ): void;
 }
