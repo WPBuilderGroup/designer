@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import AppShell from '@/components/AppShell'
 import type { ReactNode } from 'react'
 
