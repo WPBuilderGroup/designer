@@ -1,8 +1,13 @@
 'use client'
 
 import { useState, useEffect, type ReactNode } from 'react'
-import type { GjsEditor, GjsReadyDetail } from '@/types/gjs'
 import GlobalStylesPanel from './GlobalStylesPanel'
+import type {
+  GjsEditor,
+  GjsReadyDetail,
+  GjsPanelChangeDetail,
+  GjsShowDrawerDetail,
+} from '@/types/gjs'
 
 interface DockItem {
   id: string
@@ -75,18 +80,13 @@ export default function LeftDock() {
       setEditor(event.detail.editor)
     }
 
-    const handlePanelChange = (event: CustomEvent<{ panelId?: string }>) => {
+    const handlePanelChange = (event: CustomEvent<GjsPanelChangeDetail>) => {
       if (event.detail.panelId) {
         setActivePanel(event.detail.panelId)
       }
     }
 
-    const handleShowDrawer = (event: CustomEvent<{
-      panelType: string
-      pagesElement?: HTMLElement
-      layersElement?: HTMLElement
-      panelElement?: HTMLElement
-    }>) => {
+    const handleShowDrawer = (event: CustomEvent<GjsShowDrawerDetail>) => {
       const { panelType, pagesElement, layersElement, panelElement } = event.detail
       setDrawerContent({ type: panelType, pagesElement, layersElement, panelElement })
       setShowDrawer(true)
@@ -145,10 +145,7 @@ export default function LeftDock() {
           <h3 className="font-medium text-gray-900">
             {drawerContent.type === 'pages-layers' ? 'Pages & Layers' : 'Layers'}
           </h3>
-          <button
-            onClick={handleCloseDrawer}
-            className="p-1 rounded hover:bg-gray-100 transition-colors"
-          >
+          <button onClick={handleCloseDrawer} className="p-1 rounded hover:bg-gray-100 transition-colors">
             <svg className="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>

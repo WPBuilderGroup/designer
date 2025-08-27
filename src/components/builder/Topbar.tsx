@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import PublishModal from './PublishModal'
-import type { GjsEditor, GjsReadyDetail } from '@/types/gjs'
+import type {
+  GjsEditor,
+  GjsReadyDetail,
+  GjsDeviceChangeDetail,
+  GjsPreviewToggleDetail,
+} from '@/types/gjs'
 
 export default function Topbar() {
   const [currentDevice, setCurrentDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
@@ -25,11 +30,11 @@ export default function Topbar() {
       updateHistoryState(editorInstance)
     }
 
-    const handleDeviceChange = (event: CustomEvent<{ device: 'desktop' | 'tablet' | 'mobile' }>) => {
+    const handleDeviceChange = (event: CustomEvent<GjsDeviceChangeDetail>) => {
       setCurrentDevice(event.detail.device)
     }
 
-    const handlePreviewToggle = (event: CustomEvent<{ isPreview: boolean }>) => {
+    const handlePreviewToggle = (event: CustomEvent<GjsPreviewToggleDetail>) => {
       setIsPreview(event.detail.isPreview)
     }
 

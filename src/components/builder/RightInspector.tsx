@@ -1,35 +1,29 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import type { GjsEditor, GjsReadyDetail } from '@/types/gjs'
+import type {
+  GjsEditor,
+  GjsReadyDetail,
+  ManagerView,
+} from '@/types/gjs'
 import { logger } from '@/lib/logger'
 
-/**
- * Safely resolve the StyleManager's DOM element after GrapesJS editor has loaded
- */
-function resolveStyleEl(editor?: GjsEditor): HTMLElement | null {
-  if (!editor) return null
-
-  const sm = (editor as any).StyleManager ?? (editor as any).Styles
-  if (!sm) return null
-
+// Helper to safely get StyleManager element after editor loaded
+function resolveStyleEl(ed?: GjsEditor): HTMLElement | null {
+  if (!ed) return null
+  const sm = ed.StyleManager
   const isLoaded =
-    typeof (editor as any).isLoaded === 'function'
-      ? (editor as any).isLoaded()
-      : !!(editor as any).getModel?.()
-
+    typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.()
   if (!isLoaded) return null
-
-  const view = typeof sm.getView === 'function' ? sm.getView() : sm.render?.()
-  const el = view?.el ?? sm.render?.()?.el
-
+  const view: ManagerView | undefined =
+    typeof sm.getView === 'function' ? sm.getView() : undefined
+  const el = view?.el ?? sm.render().el
   return el instanceof HTMLElement ? el : null
 }
 
 export default function RightInspector() {
   const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles')
   const [editor, setEditor] = useState<GjsEditor | null>(null)
-
   const stylesContainerRef = useRef<HTMLDivElement>(null)
   const propertiesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -54,7 +48,6 @@ export default function RightInspector() {
       window.removeEventListener('gjs-ready', handleGjsReady as EventListener)
       window.removeEventListener('gjs-component-select', handleComponentSelect)
     }
-    // `editor` intentionally excluded from deps; we access via closure
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -75,7 +68,9 @@ export default function RightInspector() {
 
       // Mount Trait Manager (Properties)
       const propertiesContainer = propertiesContainerRef.current
-      const tmEl = editorInstance.TraitManager?.render?.()?.el
+      const tm = editorInstance.TraitManager
+      const tmView = tm.render()
+      const tmEl = tmView.el
 
       if (propertiesContainer) {
         propertiesContainer.innerHTML = ''
