@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { query, type QueryParam, type GjsComponent, type GjsStyle } from '@/lib/db'
+import {
+  query,
+  type QueryParam,
+  type GjsComponent,
+  type GjsStyle,
+} from '@/lib/db'
 import { safeJson } from '@/lib/api'
 
 export async function GET(req: NextRequest) {
@@ -52,14 +57,21 @@ export async function POST(req: NextRequest) {
   }
 
   if (!name) {
-    return NextResponse.json({ error: 'Missing required field: name' }, { status: 400 })
+    return NextResponse.json(
+      { error: 'Missing required field: name' },
+      { status: 400 }
+    )
   }
 
   const g = grapesJson || {}
-  const gHtml = (g['gjs-html'] as string) || ''
-  const gCss = (g['gjs-css'] as string) || ''
-  const gComp = (g['gjs-components'] as GjsComponent[]) || []
-  const gStyles = (g['gjs-styles'] as GjsStyle[]) || []
+  const gHtml = typeof g['gjs-html'] === 'string' ? g['gjs-html'] : ''
+  const gCss = typeof g['gjs-css'] === 'string' ? g['gjs-css'] : ''
+  const gComp = Array.isArray(g['gjs-components'])
+    ? (g['gjs-components'] as GjsComponent[])
+    : []
+  const gStyles = Array.isArray(g['gjs-styles'])
+    ? (g['gjs-styles'] as GjsStyle[])
+    : []
 
   await query(
     `

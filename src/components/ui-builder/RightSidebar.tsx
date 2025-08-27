@@ -21,7 +21,7 @@ type RightTabType = 'properties' | 'styles' | 'settings'
 
 export function RightSidebar() {
   const [activeTab, setActiveTab] = useState<RightTabType>('properties')
-  const [selectedElement, setSelectedElement] = useState('Text Element')
+  const [selectedElement] = useState('Text Element')
 
   const tabs = [
     { id: 'properties', label: 'Properties', icon: Settings },

@@ -46,7 +46,6 @@ export async function POST(req: NextRequest) {
   const url = new URL(req.url)
   const legacyProjectSlug = url.searchParams.get('project') || ''
   const body = await req.json().catch(() => ({}))
-
   const parsed = BodySchema.safeParse(body)
 
   if (!parsed.success) {

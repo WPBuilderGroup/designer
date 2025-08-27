@@ -28,12 +28,18 @@ export async function PUT(
   const seoRaw = body['seo']
 
   // Validate grapesJson
-  if (grapesJson !== undefined && (typeof grapesJson !== 'object' || grapesJson === null || Array.isArray(grapesJson))) {
+  if (
+    grapesJson !== undefined &&
+    (typeof grapesJson !== 'object' || grapesJson === null || Array.isArray(grapesJson))
+  ) {
     return NextResponse.json({ error: 'Invalid grapesJson' }, { status: 400 })
   }
 
   // Validate seo
-  if (seoRaw !== undefined && (typeof seoRaw !== 'object' || seoRaw === null || Array.isArray(seoRaw))) {
+  if (
+    seoRaw !== undefined &&
+    (typeof seoRaw !== 'object' || seoRaw === null || Array.isArray(seoRaw))
+  ) {
     return NextResponse.json({ error: 'Invalid seo' }, { status: 400 })
   }
 
@@ -43,8 +49,8 @@ export async function PUT(
 
   const gHtml = typeof g['gjs-html'] === 'string' ? g['gjs-html'] : ''
   const gCss = typeof g['gjs-css'] === 'string' ? g['gjs-css'] : ''
-  const gComp = (g['gjs-components'] as GjsComponent[]) || []
-  const gStyles = (g['gjs-styles'] as GjsStyle[]) || []
+  const gComp = Array.isArray(g['gjs-components']) ? (g['gjs-components'] as GjsComponent[]) : []
+  const gStyles = Array.isArray(g['gjs-styles']) ? (g['gjs-styles'] as GjsStyle[]) : []
 
   // Update grapes content
   await query(

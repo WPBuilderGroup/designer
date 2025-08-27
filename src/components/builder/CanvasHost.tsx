@@ -2,15 +2,10 @@
 
 import React, { useEffect, useRef } from 'react';
 import grapesjs, { Editor } from 'grapesjs';
+// @ts-expect-error – preset chưa có type đầy đủ
 import presetWebpage from 'grapesjs-preset-webpage';
 import type { BackboneView } from '@/types/grapesjs';
 import { logger } from '@/lib/logger';
-
-declare global {
-  interface Window {
-    __gjs?: GjsEditor;
-  }
-}
 
 type CanvasHostProps = {
   className?: string;
@@ -23,6 +18,12 @@ interface PagesApi {
 type GjsEditor = Editor & {
   Pages: PagesApi;
 };
+
+declare global {
+  interface Window {
+    __gjs?: GjsEditor;
+  }
+}
 
 const isBackboneView = (view: unknown): view is BackboneView =>
   typeof view === 'object' &&

@@ -89,7 +89,7 @@ export default function DeviceSelect() {
           role="listbox"
           aria-labelledby="device-select-button"
         >
-          {devices.map((device, index) => (
+          {devices.map((device) => (
             <button
               key={device.name}
               onClick={() => handleDeviceSelect(device.name)}

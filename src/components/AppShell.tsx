@@ -22,8 +22,6 @@ export default function AppShell({ children }: AppShellProps) {
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null)
 
   useEffect(() => {
-    if (typeof window === 'undefined') return
-
     const savedWorkspaceId = localStorage.getItem(CURRENT_WORKSPACE_KEY)
     let ws: Workspace | null = null
 
