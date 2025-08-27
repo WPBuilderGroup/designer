@@ -1,15 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect } from 'react'
+import type { ReactNode } from 'react'
+
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+
 import { listWorkspaces, getWorkspace } from '../lib/store'
 import type { Workspace } from '@/types/workspace'
+
 import Button from './ui/Button'
 import Dropdown from './ui/Dropdown'
 
 export interface AppShellProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 const CURRENT_WORKSPACE_KEY = 'currentWS'
