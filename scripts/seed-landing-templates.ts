@@ -1,4 +1,3 @@
-// scripts/seed-landing-templates.ts
 import * as dotenv from 'dotenv'
 import { resolve } from 'node:path'
 dotenv.config({ path: resolve(process.cwd(), '.env.local') })
@@ -78,6 +77,8 @@ async function run() {
   }
 }
 
-run().catch(() => {
+run().catch(async (e) => {
+  console.error('Error running seed script:', e)
+  await closePool()
   process.exit(1)
 })
