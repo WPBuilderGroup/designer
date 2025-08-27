@@ -19,18 +19,18 @@ export default function AppShell({ children }: AppShellProps) {
   const workspaces = listWorkspaces()
   const [currentWorkspace, setCurrentWorkspace] = useState<Workspace | null>(null)
 
-  // Load current workspace from localStorage on mount (client only)
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const savedId = localStorage.getItem(CURRENT_WORKSPACE_KEY)
+    const savedWorkspaceId = localStorage.getItem(CURRENT_WORKSPACE_KEY)
     let ws: Workspace | null = null
 
-    if (savedId) {
-      ws = getWorkspace(savedId)
+    if (savedWorkspaceId) {
+      ws = getWorkspace(savedWorkspaceId)
     }
-    if (!ws) {
-      ws = workspaces[0] ?? null
+
+    if (!ws && workspaces.length > 0) {
+      ws = workspaces[0]
     }
 
     if (ws) {
@@ -41,11 +41,9 @@ export default function AppShell({ children }: AppShellProps) {
     }
   }, [workspaces])
 
-  const handleWorkspaceSelect = (ws: Workspace) => {
-    setCurrentWorkspace(ws)
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(CURRENT_WORKSPACE_KEY, ws.id)
-    }
+  const handleWorkspaceSelect = (workspace: Workspace) => {
+    setCurrentWorkspace(workspace)
+    localStorage.setItem(CURRENT_WORKSPACE_KEY, workspace.id)
     router.push('/projects')
   }
 
@@ -168,7 +166,6 @@ export default function AppShell({ children }: AppShellProps) {
       <div className="flex-1 flex flex-col">
         {/* Topbar */}
         <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
-          {/* Left: Workspace Selector */}
           <div className="flex items-center space-x-4">
             <Dropdown
               trigger={
@@ -189,7 +186,6 @@ export default function AppShell({ children }: AppShellProps) {
             />
           </div>
 
-          {/* Right: Help and Actions */}
           <div className="flex items-center space-x-3">
             <Button variant="ghost" size="sm">
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -200,7 +196,6 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
         </header>
 
-        {/* Main scrollable content */}
         <main className="flex-1 overflow-auto">{children}</main>
       </div>
     </div>
