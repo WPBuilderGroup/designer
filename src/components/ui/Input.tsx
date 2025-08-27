@@ -1,7 +1,7 @@
 import { InputHTMLAttributes, forwardRef } from 'react'
 import { cn } from '../../lib/utils'
 
-// Alias that can be extended with additional props in the future
+// Alias for input props, extendable for future customization
 export type InputProps = InputHTMLAttributes<HTMLInputElement>
 
 const Input = forwardRef<HTMLInputElement, InputProps>(

@@ -48,7 +48,7 @@ export default function WorkspaceDetailPage() {
         alert('Workspace renamed successfully!')
       } else {
         alert('Failed to rename workspace')
-        setWorkspaceName(workspace.name) // Reset to original name
+        setWorkspaceName(workspace.name)
       }
     } catch (error) {
       console.error('Error renaming workspace:', error)
