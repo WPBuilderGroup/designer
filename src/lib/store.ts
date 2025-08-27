@@ -88,7 +88,7 @@ export function listWorkspaces(): Workspace[] {
 
 export function createWorkspace(name: string): Workspace {
   const workspace: Workspace = {
-    id: `ws-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `ws-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     name,
     role: 'owner',
     createdAt: Date.now(),
@@ -147,7 +147,7 @@ export function createProject(data: {
   thumb?: string;
 }): Project {
   const project: Project = {
-    id: `proj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     workspaceId: data.workspaceId,
     name: data.name,
     slug: data.slug,
