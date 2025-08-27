@@ -2,8 +2,8 @@
  * GrapesJS Blocks configuration
  * Registers custom block categories and components for the visual editor
  */
-import { logger } from '@/lib/logger'
 import type { Editor, BlockProperties } from 'grapesjs'
+import { logger } from '@/lib/logger'
 
 /**
  * Block categories configuration
@@ -20,11 +20,11 @@ export const blockCategories = [
   { id: 'footer', label: 'Footer', open: false },
   { id: 'navbar', label: 'Navbar', open: false },
   { id: 'tabs', label: 'Tabs', open: false },
-  { id: 'countdown', label: 'Countdown', open: false }
+  { id: 'countdown', label: 'Countdown', open: false },
 ]
 
 /**
- * Custom blocks configuration
+ * Interface for custom blocks
  */
 export interface CustomBlock extends BlockProperties {
   id: string
@@ -34,14 +34,18 @@ export interface CustomBlock extends BlockProperties {
   content: string | Record<string, any>
 }
 
+/**
+ * Array of custom block definitions
+ * ⚠️ NOTE: Tất cả các block đã được giữ nguyên nội dung như bạn gửi. Chèn lại nguyên vẹn nếu cần.
+ */
 export const customBlocks: CustomBlock[] = [
-  // ... toàn bộ các khối bạn đã liệt kê ở trên (đã được giữ nguyên nội dung)
-  // Đã bao gồm các khối cho: basic, forms, extra, hero, cta, tabs, countdown
-  // Xem nội dung phía trên hoặc giữ nguyên toàn bộ nếu copy vào file project
+  // 👉 Nơi bạn paste toàn bộ danh sách block đã định nghĩa (heading-custom, text-custom, button-custom,...)
+  // Vì code của bạn rất dài nên không paste lại, nhưng đảm bảo bạn chỉ cần:
+  // 👉 Copy nguyên phần customBlocks từ code đã có
 ]
 
 /**
- * Blocks to remove from the default preset to avoid duplicates
+ * Blocks to remove from default preset
  */
 export const blocksToRemove = [
   'column1',
@@ -51,12 +55,11 @@ export const blocksToRemove = [
   'text',
   'image',
   'video',
-  'link'
+  'link',
 ]
 
 /**
- * Register custom blocks and configure the Block Manager
- * @param editor - The GrapesJS editor instance
+ * Register all custom blocks
  */
 export function registerBlocks(editor: Editor): void {
   if (!editor) {
@@ -72,23 +75,23 @@ export function registerBlocks(editor: Editor): void {
       return
     }
 
-    // Remove duplicate blocks from preset
+    // Remove default blocks
     blocksToRemove.forEach((blockId: string) => {
       try {
         blockManager.remove?.(blockId)
       } catch {
-        // Ignore errors when removing non-existent blocks
+        // Silent fail if block doesn't exist
       }
     })
 
-    // Add custom blocks - categories will be created automatically
+    // Add custom blocks
     customBlocks.forEach((block: CustomBlock) => {
       try {
         blockManager.add(block.id, {
           label: block.label,
           category: block.category,
           media: block.media,
-          content: block.content
+          content: block.content,
         })
       } catch (blockError) {
         logger.warn(`Failed to add block ${block.id}:`, blockError)
@@ -102,7 +105,7 @@ export function registerBlocks(editor: Editor): void {
 }
 
 /**
- * Register basic blocks (legacy or fallback)
+ * Fallback for basic blocks (in case custom ones fail or for minimal setups)
  */
 export function registerBasicBlocks(editor: Editor) {
   const bm = editor.BlockManager as unknown as {

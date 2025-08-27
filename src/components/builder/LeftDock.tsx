@@ -208,7 +208,6 @@ export default function LeftDock() {
 
   return (
     <>
-      {/* Left Dock Buttons */}
       <div className="h-full flex flex-col py-2">
         {dockItems.map((item) => {
           const isCmdRouted = item.id !== 'global-styles' && !!item.command
@@ -233,7 +232,6 @@ export default function LeftDock() {
         })}
       </div>
 
-      {/* Drawer */}
       {showDrawer && (
         <div className="fixed inset-0 z-40 pointer-events-none">
           <div className="absolute left-14 top-0 bottom-0 pointer-events-auto">
@@ -244,7 +242,6 @@ export default function LeftDock() {
         </div>
       )}
 
-      {/* Global Styles Panel */}
       <GlobalStylesPanel
         isOpen={showGlobalStyles}
         onClose={handleCloseGlobalStyles}
