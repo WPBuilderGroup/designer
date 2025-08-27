@@ -2,37 +2,52 @@
 
 import React, { useEffect, useRef } from 'react';
 import grapesjs, { Editor } from 'grapesjs';
-// (tuỳ bạn có dùng preset nào, có thể giữ hoặc bỏ 2 dòng dưới)
-// @ts-ignore – một số preset chưa có type
 import presetWebpage from 'grapesjs-preset-webpage';
+import type { BackboneView } from '@/types/grapesjs';
 
 type CanvasHostProps = {
-  // có thể truyền thêm props nếu bạn đang dùng (projectId, pageId,…)
   className?: string;
 };
 
+interface PagesApi {
+  render(): BackboneView | HTMLElement;
+}
+
+type GjsEditor = Editor & {
+  Pages: PagesApi;
+};
+
+const isBackboneView = (view: unknown): view is BackboneView =>
+  typeof view === 'object' &&
+  view !== null &&
+  'el' in view &&
+  (view as { el?: unknown }).el instanceof HTMLElement;
+
+const getViewElement = (view: unknown): HTMLElement | null => {
+  if (view instanceof HTMLElement) return view;
+  if (isBackboneView(view)) return view.el;
+  return null;
+};
+
 export default function CanvasHost({ className }: CanvasHostProps) {
-  // Canvas & panel refs
   const canvasRef = useRef<HTMLDivElement | null>(null);
   const blocksRef = useRef<HTMLDivElement | null>(null);
   const layersRef = useRef<HTMLDivElement | null>(null);
   const pagesRef = useRef<HTMLDivElement | null>(null);
   const assetsRef = useRef<HTMLDivElement | null>(null);
   const stylesRef = useRef<HTMLDivElement | null>(null);
-
-  const editorRef = useRef<Editor | null>(null);
+  const editorRef = useRef<GjsEditor | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    // Khởi tạo editor
     const editor = grapesjs.init({
       container: canvasRef.current,
       height: '100%',
       width: '100%',
       fromElement: false,
-      storageManager: false, // bạn có thể bật lại sau
-      panels: { defaults: [] }, // ta tự build UI ngoài
+      storageManager: false,
+      panels: { defaults: [] },
       deviceManager: {
         devices: [
           { name: 'Desktop', width: '' },
@@ -44,103 +59,70 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       pluginsOpts: {
         [presetWebpage]: {},
       },
-    });
+    }) as GjsEditor;
 
     editorRef.current = editor;
-    // Expose để debug
-    // @ts-ignore
-    window.__gjs = editor;
+
+    if (process.env.NODE_ENV === 'development') {
+      (window as any).__gjs = editor;
+    }
 
     const log = (msg: string) => console.log(msg);
 
-    const mountManagers = () => {
-      // BLOCKS
-      try {
-        const el = blocksRef.current;
-        if (el) {
-          el.innerHTML = '';
-          const view = editor.BlockManager.render();
-          // @ts-ignore view.el tồn tại vì là Backbone view
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Block Manager mounted');
+    const mountView = (
+      ref: React.RefObject<HTMLDivElement | null>,
+      view: unknown,
+      name: string
+    ) => {
+      const el = ref.current;
+      if (el) {
+        el.innerHTML = '';
+        const element = getViewElement(view);
+        if (element) {
+          el.appendChild(element);
+          log(`[GrapesJS] ${name} mounted`);
         } else {
-          console.warn('[GrapesJS] Blocks element not available');
+          console.warn(`[GrapesJS] ${name} render returned invalid view`);
         }
+      } else {
+        console.warn(`[GrapesJS] ${name} element not available`);
+      }
+    };
+
+    const mountManagers = () => {
+      try {
+        mountView(blocksRef, editor.BlockManager.render(), 'Block Manager');
       } catch (e) {
         console.warn('[GrapesJS] BlockManager mount error', e);
       }
 
-      // LAYERS
       try {
-        const el = layersRef.current;
-        if (el) {
-          el.innerHTML = '';
-          const view = editor.LayerManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Layer Manager mounted');
-        } else {
-          console.warn('[GrapesJS] Layers element not available');
-        }
+        mountView(layersRef, editor.LayerManager.render(), 'Layer Manager');
       } catch (e) {
         console.warn('[GrapesJS] LayerManager mount error', e);
       }
 
-      // PAGES
       try {
-        const el = pagesRef.current;
-        if (el) {
-          el.innerHTML = '';
-          // Pages API mới – render() trả Backbone view giống các manager khác
-          // @ts-ignore
-          const view = editor.Pages.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Pages Manager mounted');
-        } else {
-          console.warn('[GrapesJS] Pages element not available');
-        }
+        mountView(pagesRef, editor.Pages.render(), 'Pages Manager');
       } catch (e) {
         console.warn('[GrapesJS] Pages mount error', e);
       }
 
-      // ASSETS
       try {
-        const el = assetsRef.current;
-        if (el) {
-          el.innerHTML = '';
-          const view = editor.AssetManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Assets Manager mounted');
-        } else {
-          console.warn('[GrapesJS] Assets element not available');
-        }
+        mountView(assetsRef, editor.AssetManager.render(), 'Assets Manager');
       } catch (e) {
         console.warn('[GrapesJS] AssetManager mount error', e);
       }
 
-      // STYLES
       try {
-        const el = stylesRef.current;
-        if (el) {
-          el.innerHTML = '';
-          const view = editor.StyleManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
-          log('[GrapesJS] Style Manager mounted');
-        } else {
-          console.warn('[GrapesJS] StyleManager element not available');
-        }
+        mountView(stylesRef, editor.StyleManager.render(), 'Style Manager');
       } catch (e) {
         console.warn('[GrapesJS] StyleManager mount error', e);
       }
     };
 
-    // Chờ editor load xong rồi mount managers
     editor.on('load', () => {
       log('GrapesJS editor initialized successfully');
-      // Đảm bảo DOM panels đã render
       requestAnimationFrame(mountManagers);
     });
 
@@ -148,35 +130,39 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       try {
         editor.destroy();
       } catch {}
+
       editorRef.current = null;
-      // @ts-ignore
-      if (window.__gjs === editor) delete window.__gjs;
+
+      if (
+        process.env.NODE_ENV === 'development' &&
+        (window as any).__gjs === editor
+      ) {
+        delete (window as any).__gjs;
+      }
     };
   }, []);
 
-  // Ở đây chỉ dựng layout + container cho các panel
   return (
-      <div className={className ?? 'h-full w-full flex'}>
-        {/* Left sidebar – bạn có thể thay bằng component riêng nếu muốn */}
-        <aside className="w-[300px] shrink-0 border-r border-border bg-background">
-          <div className="h-1/2 overflow-auto" ref={pagesRef} aria-label="Pages" />
-          <div className="h-1/2 overflow-auto" ref={layersRef} aria-label="Layers" />
-        </aside>
+    <div className={className ?? 'h-full w-full flex'}>
+      {/* Left sidebar */}
+      <aside className="w-[300px] shrink-0 border-r border-border bg-background">
+        <div className="h-1/2 overflow-auto" ref={pagesRef} aria-label="Pages" />
+        <div className="h-1/2 overflow-auto" ref={layersRef} aria-label="Layers" />
+      </aside>
 
-        {/* Canvas */}
-        <main className="flex-1 relative bg-muted">
-          <div ref={canvasRef} className="absolute inset-0" />
-        </main>
+      {/* Canvas */}
+      <main className="flex-1 relative bg-muted">
+        <div ref={canvasRef} className="absolute inset-0" />
+      </main>
 
-        {/* Right sidebar */}
-        <aside className="w-[360px] shrink-0 border-l border-border bg-background">
-          <div className="h-1/2 overflow-auto" ref={blocksRef} aria-label="Blocks" />
-          <div className="h-1/2 overflow-auto">
-            {/* Tabs Styles/Assets nếu bạn muốn tách riêng, tạm để 2 khối dưới đây */}
-            <div className="h-[50%] overflow-auto" ref={stylesRef} aria-label="Styles" />
-            <div className="h-[50%] overflow-auto" ref={assetsRef} aria-label="Assets" />
-          </div>
-        </aside>
-      </div>
+      {/* Right sidebar */}
+      <aside className="w-[360px] shrink-0 border-l border-border bg-background">
+        <div className="h-1/2 overflow-auto" ref={blocksRef} aria-label="Blocks" />
+        <div className="h-1/2 overflow-auto">
+          <div className="h-[50%] overflow-auto" ref={stylesRef} aria-label="Styles" />
+          <div className="h-[50%] overflow-auto" ref={assetsRef} aria-label="Assets" />
+        </div>
+      </aside>
+    </div>
   );
 }

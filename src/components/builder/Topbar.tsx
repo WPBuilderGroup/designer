@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import PublishModal from './PublishModal'
+import { useState, useEffect } from 'react';
+import PublishModal from './PublishModal';
+import type { GjsEditor, GjsReadyDetail } from '@/types/gjs';
 
 export default function Topbar() {
   const [currentDevice, setCurrentDevice] = useState<'desktop' | 'tablet' | 'mobile'>('desktop')
   const [isPreview, setIsPreview] = useState(false)
   const [canUndo, setCanUndo] = useState(false)
   const [canRedo, setCanRedo] = useState(false)
-  const [editor, setEditor] = useState<any>(null)
+  const [editor, setEditor] = useState<GjsEditor | null>(null)
   const [showPublishModal, setShowPublishModal] = useState(false)
 
   const deviceSizes = [
@@ -19,8 +20,8 @@ export default function Topbar() {
 
   useEffect(() => {
     // Listen for GrapesJS ready event
-    const handleGjsReady = (event: CustomEvent) => {
-      const editorInstance = event.detail
+    const handleGjsReady = (event: CustomEvent<GjsReadyDetail>) => {
+      const { editor: editorInstance } = event.detail
       setEditor(editorInstance)
 
       // Initialize undo/redo state
@@ -28,12 +29,12 @@ export default function Topbar() {
     }
 
     // Listen for device changes
-    const handleDeviceChange = (event: CustomEvent) => {
+    const handleDeviceChange = (event: CustomEvent<{ device: 'desktop' | 'tablet' | 'mobile' }>) => {
       setCurrentDevice(event.detail.device)
     }
 
     // Listen for preview toggle
-    const handlePreviewToggle = (event: CustomEvent) => {
+    const handlePreviewToggle = (event: CustomEvent<{ isPreview: boolean }>) => {
       setIsPreview(event.detail.isPreview)
     }
 
@@ -58,7 +59,7 @@ export default function Topbar() {
     }
   }, [editor])
 
-  const updateHistoryState = (editorInstance: any) => {
+  const updateHistoryState = (editorInstance: GjsEditor) => {
     const undoManager = editorInstance.UndoManager
     setCanUndo(undoManager.hasUndo())
     setCanRedo(undoManager.hasRedo())
