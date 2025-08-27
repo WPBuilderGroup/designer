@@ -102,7 +102,6 @@ export default function AppShell({ children }: AppShellProps) {
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar */}
       <div className="w-60 bg-white border-r border-gray-200 flex flex-col">
-        {/* Logo */}
         <div className="h-14 flex items-center px-6 border-b border-gray-200">
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -112,7 +111,6 @@ export default function AppShell({ children }: AppShellProps) {
           </div>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 px-4 py-6 space-y-1">
           {[
             {
@@ -164,9 +162,8 @@ export default function AppShell({ children }: AppShellProps) {
         </nav>
       </div>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Topbar */}
         <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6">
           <div className="flex items-center space-x-4">
             <Dropdown

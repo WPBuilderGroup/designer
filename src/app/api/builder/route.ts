@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
   const page = sp.get('page')
 
   const data = mem.get(keyOf(project, page)) ?? emptyPayload
+
   return NextResponse.json(data)
 }
 
@@ -51,5 +52,6 @@ export async function POST(req: NextRequest) {
   }
 
   mem.set(keyOf(project, page), payload)
+
   return NextResponse.json({ ok: true })
 }
