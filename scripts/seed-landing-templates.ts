@@ -1,14 +1,15 @@
 // scripts/seed-landing-templates.ts
 import * as dotenv from 'dotenv'
-import path from 'node:path'
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+import { resolve } from 'node:path'
+dotenv.config({ path: resolve(process.cwd(), '.env.local') })
 
-import { getPool } from '../src/lib/db'
+import { getPool, closePool } from '../src/lib/db'
+import { logger } from '../src/lib/logger'
 
 const previews = [
   '/demo/0b64e28e-8942-4ffe-8102-7cf7d491ca17.png',
   '/demo/29ebac7f-2d59-42b9-96bd-8f134972230b.png',
-  '/demo/3ca1938a-24d3-4d65-8154-0e954d0df1cd.png'
+  '/demo/3ca1938a-24d3-4d65-8154-0e954d0df1cd.png',
 ]
 
 const templates = [
@@ -19,7 +20,7 @@ const templates = [
              <h1>Caleb & Amaya</h1><p>Our Wedding – Save the Date</p>
              <a href="#" style="padding:10px 16px;border:1px solid #333;border-radius:6px;display:inline-block;margin-top:10px">RSVP</a>
            </section>`,
-    css: ``
+    css: ``,
   },
   {
     name: 'Event Conference',
@@ -28,7 +29,7 @@ const templates = [
              <h1>TechConf 2025</h1><p>Join 3,000+ builders</p>
              <a href="#" style="background:#fff;color:#0e1726;padding:10px 16px;border-radius:6px;display:inline-block;margin-top:10px">Get Tickets</a>
            </header>`,
-    css: ``
+    css: ``,
   },
   {
     name: 'SaaS Hero',
@@ -39,28 +40,44 @@ const templates = [
              <div><a href="#" style="padding:10px 16px;border:1px solid #333;border-radius:8px;margin-right:8px;display:inline-block">Start free</a>
              <a href="#" style="padding:10px 16px;border:1px solid #333;border-radius:8px;display:inline-block">Book demo</a></div>
            </section>`,
-    css: ``
-  }
+    css: ``,
+  },
 ]
 
 async function run() {
   const pool = getPool()
-  for (const t of templates) {
-    await pool.query(
-        'insert into templates(name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta) values ($1,$2,$3,$4,$5,$6,$7)',
+
+  try {
+    for (const t of templates) {
+      await pool.query(
+        `
+          INSERT INTO templates (name, type, gjs_html, gjs_css, gjs_components, gjs_styles, meta)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (name) DO NOTHING
+        `,
         [
           t.name,
           'page',
           t.html,
           t.css,
-          JSON.stringify({}),
-          JSON.stringify({}),
-          JSON.stringify({ preview: t.preview })
+          JSON.stringify([]), // gjs_components
+          JSON.stringify([]), // gjs_styles
+          JSON.stringify({ preview: t.preview }), // meta
         ]
-    )
+      )
+    }
+
+    logger.info('Seeded templates', { count: templates.length })
+  } catch (error) {
+    logger.error('Failed seeding templates', {
+      error: error instanceof Error ? error.message : String(error),
+    })
+    throw error
+  } finally {
+    await closePool()
   }
-  console.log('Seeded templates:', templates.length)
-  process.exit(0)
 }
 
-run().catch(e => { console.error(e); process.exit(1) })
+run().catch(() => {
+  process.exit(1)
+})
