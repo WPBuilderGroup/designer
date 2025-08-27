@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import type { GrapesJSEditor } from '@/types/grapesjs'
 
 interface GlobalStylesState {
   colors: {
@@ -49,7 +50,7 @@ const defaultStyles: GlobalStylesState = {
 interface GlobalStylesPanelProps {
   isOpen: boolean
   onClose: () => void
-  editor?: any
+  editor?: GrapesJSEditor
 }
 
 export default function GlobalStylesPanel({ isOpen, onClose, editor }: GlobalStylesPanelProps) {
