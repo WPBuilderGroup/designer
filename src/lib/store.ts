@@ -1,4 +1,5 @@
-import { Workspace, Project, ProjectStatus } from './types';
+import type { Workspace } from '@/types/workspace';
+import { Project, ProjectStatus } from './types';
 
 // Storage keys
 const STORAGE_KEY_WORKSPACES = 'designer-workspaces';
@@ -19,7 +20,7 @@ const createDefaultData = () => {
       workspaceId: 'default-workspace',
       name: 'My First Website',
       slug: 'my-first-website',
-      status: 'published' as ProjectStatus,
+      status: 'published',
       thumb: '/demo/Projects-detail.jpg',
       updatedAt: Date.now() - 86400000, // 1 day ago
     },
@@ -28,7 +29,7 @@ const createDefaultData = () => {
       workspaceId: 'default-workspace',
       name: 'Landing Page Draft',
       slug: 'landing-page-draft',
-      status: 'draft' as ProjectStatus,
+      status: 'draft',
       thumb: '/demo/Projects-Create.jpg',
       updatedAt: Date.now() - 3600000, // 1 hour ago
     },
@@ -63,19 +64,16 @@ function load(): void {
     const savedProjects = localStorage.getItem(STORAGE_KEY_PROJECTS);
 
     if (savedWorkspaces && savedProjects) {
-      // Load existing data
       db.workspaces = JSON.parse(savedWorkspaces);
       db.projects = JSON.parse(savedProjects);
     } else {
-      // Initialize with default data
       const defaultData = createDefaultData();
       db.workspaces = [defaultData.workspace];
       db.projects = [...defaultData.projects];
-      persist(); // Persist the default data
+      persist();
     }
   } catch (error) {
     console.warn('Failed to load data from localStorage, initializing with defaults:', error);
-    // Fallback to default data
     const defaultData = createDefaultData();
     db.workspaces = [defaultData.workspace];
     db.projects = [...defaultData.projects];
@@ -90,7 +88,7 @@ export function listWorkspaces(): Workspace[] {
 
 export function createWorkspace(name: string): Workspace {
   const workspace: Workspace = {
-    id: `ws-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `ws-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     name,
     role: 'owner',
     createdAt: Date.now(),
@@ -119,7 +117,6 @@ export function deleteWorkspace(id: string): boolean {
   const index = db.workspaces.findIndex(ws => ws.id === id);
   if (index !== -1) {
     db.workspaces.splice(index, 1);
-    // Also delete all projects in this workspace
     db.projects = db.projects.filter(proj => proj.workspaceId !== id);
     persist();
     return true;
@@ -139,7 +136,7 @@ export function listProjects(filters?: { workspaceId?: string; status?: ProjectS
     projects = projects.filter(proj => proj.status === filters.status);
   }
 
-  return projects.sort((a, b) => b.updatedAt - a.updatedAt); // Most recent first
+  return projects.sort((a, b) => b.updatedAt - a.updatedAt);
 }
 
 export function createProject(data: {
@@ -150,7 +147,7 @@ export function createProject(data: {
   thumb?: string;
 }): Project {
   const project: Project = {
-    id: `proj-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+    id: `proj-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
     workspaceId: data.workspaceId,
     name: data.name,
     slug: data.slug,

@@ -24,8 +24,8 @@ interface StatusMessage {
 
 export function StatusBar() {
   const [isOnline, setIsOnline] = useState(true)
-  const [lastSaved, setLastSaved] = useState<Date>(new Date())
-  const [messages, setMessages] = useState<StatusMessage[]>([
+  const [lastSaved] = useState<Date>(new Date())
+  const [messages] = useState<StatusMessage[]>([
     {
       id: '1',
       type: 'success',
@@ -74,14 +74,6 @@ export function StatusBar() {
       default:
         return <Info size={14} className="text-gray-500" />
     }
-  }
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour12: false,
-      hour: '2-digit',
-      minute: '2-digit'
-    })
   }
 
   const getRelativeTime = (date: Date) => {
