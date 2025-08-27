@@ -6,6 +6,12 @@ import presetWebpage from 'grapesjs-preset-webpage';
 import type { BackboneView } from '@/types/grapesjs';
 import { logger } from '@/lib/logger';
 
+declare global {
+  interface Window {
+    __gjs?: GjsEditor;
+  }
+}
+
 type CanvasHostProps = {
   className?: string;
 };
@@ -18,14 +24,11 @@ type GjsEditor = Editor & {
   Pages: PagesApi;
 };
 
-declare global {
-  interface Window {
-    __gjs?: GjsEditor;
-  }
-}
-
 const isBackboneView = (view: unknown): view is BackboneView =>
-  typeof view === 'object' && view !== null && 'el' in view && (view as any).el instanceof HTMLElement;
+  typeof view === 'object' &&
+  view !== null &&
+  'el' in view &&
+  (view as any).el instanceof HTMLElement;
 
 const getViewElement = (view: unknown): HTMLElement | null => {
   if (view instanceof HTMLElement) return view;
