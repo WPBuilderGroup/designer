@@ -3,7 +3,6 @@
 import React, { useEffect, useRef } from 'react';
 import grapesjs, { Editor } from 'grapesjs';
 // (tuỳ bạn có dùng preset nào, có thể giữ hoặc bỏ 2 dòng dưới)
-// @ts-ignore – một số preset chưa có type
 import presetWebpage from 'grapesjs-preset-webpage';
 
 type CanvasHostProps = {
@@ -48,7 +47,6 @@ export default function CanvasHost({ className }: CanvasHostProps) {
 
     editorRef.current = editor;
     // Expose để debug
-    // @ts-ignore
     window.__gjs = editor;
 
     const log = (msg: string) => console.log(msg);
@@ -60,8 +58,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.BlockManager.render();
-          // @ts-ignore view.el tồn tại vì là Backbone view
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          if (view?.el) el.appendChild(view.el);
           log('[GrapesJS] Block Manager mounted');
         } else {
           console.warn('[GrapesJS] Blocks element not available');
@@ -76,8 +73,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.LayerManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          if (view?.el) el.appendChild(view.el);
           log('[GrapesJS] Layer Manager mounted');
         } else {
           console.warn('[GrapesJS] Layers element not available');
@@ -92,10 +88,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           // Pages API mới – render() trả Backbone view giống các manager khác
-          // @ts-ignore
           const view = editor.Pages.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          if (view?.el) el.appendChild(view.el);
           log('[GrapesJS] Pages Manager mounted');
         } else {
           console.warn('[GrapesJS] Pages element not available');
@@ -110,8 +104,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.AssetManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          if (view?.el) el.appendChild(view.el);
           log('[GrapesJS] Assets Manager mounted');
         } else {
           console.warn('[GrapesJS] Assets element not available');
@@ -126,8 +119,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         if (el) {
           el.innerHTML = '';
           const view = editor.StyleManager.render();
-          // @ts-ignore
-          if (view && view.el) el.appendChild(view.el as HTMLElement);
+          if (view?.el) el.appendChild(view.el);
           log('[GrapesJS] Style Manager mounted');
         } else {
           console.warn('[GrapesJS] StyleManager element not available');
@@ -149,7 +141,6 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         editor.destroy();
       } catch {}
       editorRef.current = null;
-      // @ts-ignore
       if (window.__gjs === editor) delete window.__gjs;
     };
   }, []);
