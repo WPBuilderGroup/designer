@@ -6,6 +6,7 @@ import type { Editor } from 'grapesjs'
 import 'grapesjs/css/grapes.min.css'
 
 import { logger } from '@/lib/logger'
+import { styleManagerConfig } from '@/lib/gjs/styles'
 
 // Import plugins in proper order
 import basicBlocks from 'grapesjs-blocks-basic'
@@ -259,48 +260,11 @@ export default function GrapesJSBuilder() {
         blockManager: {
           appendTo: '.blocks-container',
           blocks: []
-        },
-
-        // Style manager for better styling options
-        styleManager: {
-          appendTo: '.styles-container',
-          sectors: [
-            {
-              name: 'Dimension',
-              open: false,
-              buildProps: ['width', 'min-height', 'padding'],
-              properties: [
-                {
-                  type: 'integer',
-                  name: 'The width',
-                  property: 'width',
-                  units: ['px', '%'],
-                  defaults: 'auto',
-                  min: 0,
-                }
-              ]
-            }, {
-              name: 'Extra',
-              open: false,
-              buildProps: ['background-color', 'box-shadow', 'custom-prop'],
-              properties: [
-                {
-                  id: 'custom-prop',
-                  name: 'Custom Label',
-                  property: 'font-size',
-                  type: 'select',
-                  defaults: '32px',
-                  options: [
-                    { id: 'tiny', value: '12px', name: 'Tiny' },
-                    { id: 'medium', value: '18px', name: 'Medium' },
-                    { id: 'big', value: '32px', name: 'Big' },
-                  ],
-                }
-              ]
-            }
-          ]
         }
       })
+
+      editorInstance.StyleManager.getSectors().reset()
+      editorInstance.StyleManager.addSectors(styleManagerConfig)
 
       // Wait for editor to be fully initialized
       editorInstance.on('load', () => {

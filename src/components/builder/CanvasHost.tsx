@@ -42,8 +42,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
   const blocksRef = useRef<HTMLDivElement | null>(null);
   const layersRef = useRef<HTMLDivElement | null>(null);
   const pagesRef = useRef<HTMLDivElement | null>(null);
-  const assetsRef = useRef<HTMLDivElement | null>(null);
-  const stylesRef = useRef<HTMLDivElement | null>(null);
+  // Style and Asset managers are rendered by RightInspector
   const editorRef = useRef<GjsEditor | null>(null);
 
   useEffect(() => {
@@ -116,17 +115,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
         logger.error('PagesManager mount error', { error: e });
       }
 
-      try {
-        mountView(assetsRef, editor.AssetManager.render(), 'Assets Manager');
-      } catch (e) {
-        logger.error('AssetManager mount error', { error: e });
-      }
-
-      try {
-        mountView(stylesRef, editor.StyleManager.render(), 'Style Manager');
-      } catch (e) {
-        logger.error('StyleManager mount error', { error: e });
-      }
+      // Style Manager and Asset Manager are mounted in RightInspector
     };
 
     editor.on('load', () => {
@@ -165,11 +154,7 @@ export default function CanvasHost({ className }: CanvasHostProps) {
 
       {/* Right sidebar */}
       <aside className="w-[360px] shrink-0 border-l border-border bg-background">
-        <div className="h-1/2 overflow-auto" ref={blocksRef} aria-label="Blocks" />
-        <div className="h-1/2 overflow-auto">
-          <div className="h-[50%] overflow-auto" ref={stylesRef} aria-label="Styles" />
-          <div className="h-[50%] overflow-auto" ref={assetsRef} aria-label="Assets" />
-        </div>
+        <div className="h-full overflow-auto" ref={blocksRef} aria-label="Blocks" />
       </aside>
     </div>
   );
