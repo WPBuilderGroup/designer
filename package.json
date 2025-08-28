@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
-    "seed:templates": "tsx scripts/seed-landing-templates.ts"
+    "seed:templates": "tsx scripts/seed-landing-templates.ts",
+    "copy:gjs:css": "node scripts/copy-grapes-css.mjs",
+    "postinstall": "node scripts/copy-grapes-css.mjs"
   },
   "dependencies": {
     "@headlessui/react": "^2.2.7",

@@ -116,97 +116,97 @@ export const sampleAssets = [
 export const fallbackAssets = [
   {
     type: 'image',
-    src: 'https://via.placeholder.com/1920x1080/667eea/ffffff?text=Hero+Background+1',
+    src: 'https://placehold.co/1920x1080/667eea/ffffff?text=Hero+Background+1',
     name: 'Hero Background 1',
     category: 'Backgrounds'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/1920x1080/764ba2/ffffff?text=Hero+Background+2',
+    src: 'https://placehold.co/1920x1080/764ba2/ffffff?text=Hero+Background+2',
     name: 'Hero Background 2',
     category: 'Backgrounds'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/400x400/007bff/ffffff?text=Team+Member+1',
+    src: 'https://placehold.co/400x400/007bff/ffffff?text=Team+Member+1',
     name: 'Team Member 1',
     category: 'People'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/400x400/28a745/ffffff?text=Team+Member+2',
+    src: 'https://placehold.co/400x400/28a745/ffffff?text=Team+Member+2',
     name: 'Team Member 2',
     category: 'People'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/400x400/dc3545/ffffff?text=Team+Member+3',
+    src: 'https://placehold.co/400x400/dc3545/ffffff?text=Team+Member+3',
     name: 'Team Member 3',
     category: 'People'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/600x400/6c757d/ffffff?text=Product+1',
+    src: 'https://placehold.co/600x400/6c757d/ffffff?text=Product+1',
     name: 'Product Image 1',
     category: 'Products'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/600x400/17a2b8/ffffff?text=Product+2',
+    src: 'https://placehold.co/600x400/17a2b8/ffffff?text=Product+2',
     name: 'Product Image 2',
     category: 'Products'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/100x100/ffc107/000000?text=Icon+1',
+    src: 'https://placehold.co/100x100/ffc107/000000?text=Icon+1',
     name: 'Feature Icon 1',
     category: 'Icons'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/100x100/fd7e14/ffffff?text=Icon+2',
+    src: 'https://placehold.co/100x100/fd7e14/ffffff?text=Icon+2',
     name: 'Feature Icon 2',
     category: 'Icons'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/100x100/e83e8c/ffffff?text=Icon+3',
+    src: 'https://placehold.co/100x100/e83e8c/ffffff?text=Icon+3',
     name: 'Feature Icon 3',
     category: 'Icons'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/200x80/343a40/ffffff?text=Logo',
+    src: 'https://placehold.co/200x80/343a40/ffffff?text=Logo',
     name: 'Sample Logo',
     category: 'Logos'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/800x600/20c997/ffffff?text=Gallery+1',
+    src: 'https://placehold.co/800x600/20c997/ffffff?text=Gallery+1',
     name: 'Gallery Image 1',
     category: 'Gallery'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/800x600/6f42c1/ffffff?text=Gallery+2',
+    src: 'https://placehold.co/800x600/6f42c1/ffffff?text=Gallery+2',
     name: 'Gallery Image 2',
     category: 'Gallery'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/800x600/fd7e14/ffffff?text=Gallery+3',
+    src: 'https://placehold.co/800x600/fd7e14/ffffff?text=Gallery+3',
     name: 'Gallery Image 3',
     category: 'Gallery'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/150x150/495057/ffffff?text=Avatar+1',
+    src: 'https://placehold.co/150x150/495057/ffffff?text=Avatar+1',
     name: 'Testimonial Avatar 1',
     category: 'Testimonials'
   },
   {
     type: 'image',
-    src: 'https://via.placeholder.com/150x150/6c757d/ffffff?text=Avatar+2',
+    src: 'https://placehold.co/150x150/6c757d/ffffff?text=Avatar+2',
     name: 'Testimonial Avatar 2',
     category: 'Testimonials'
   }
@@ -239,13 +239,22 @@ export function configureAssets(editor: Editor): void {
       logger.info('Asset added:', asset.get('src'))
     })
 
-    // Configure drag and drop for assets
-    editor.on('canvas:dragover', (e: DragEvent) => {
-      e.preventDefault()
+    // Configure drag and drop for assets (guard against different event signatures)
+    const safePrevent = (...args: unknown[]) => {
+      for (const a of args) {
+        const ev = a as { preventDefault?: () => void }
+        if (ev && typeof ev.preventDefault === 'function') {
+          try { ev.preventDefault() } catch (_) { /* noop */ }
+        }
+      }
+    }
+
+    editor.on('canvas:dragover', (...args: unknown[]) => {
+      safePrevent(...args)
     })
 
-    editor.on('canvas:drop', (e: DragEvent) => {
-      e.preventDefault()
+    editor.on('canvas:drop', (...args: unknown[]) => {
+      safePrevent(...args)
       // Handle file drops here if needed
     })
 

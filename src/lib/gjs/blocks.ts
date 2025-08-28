@@ -39,14 +39,83 @@ export interface CustomBlock extends BlockProperties {
  * ⚠️ NOTE: Bạn cần thêm lại customBlocks vào đây nếu có
  */
 export const customBlocks: CustomBlock[] = [
-  // ✨ Ví dụ (hoặc paste lại toàn bộ custom block từ cấu hình của bạn)
-  // {
-  //   id: 'heading-custom',
-  //   label: 'Heading',
-  //   category: 'basic',
-  //   media: '<svg>...</svg>',
-  //   content: '<h1>Heading</h1>',
-  // },
+  {
+    id: 'section-hero',
+    label: 'Hero Section',
+    category: 'hero',
+    media:
+      '<div style="width:100%;height:40px;background:#667eea;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;">Hero</div>',
+    content:
+      `<section class="hero-section" style="padding:80px 20px;text-align:center;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);color:white;">
+        <div style="max-width:800px;margin:0 auto;">
+          <h1 style="font-size:3rem;margin-bottom:1rem;font-weight:bold;">Your Amazing Hero Title</h1>
+          <p style="font-size:1.2rem;margin-bottom:2rem;opacity:0.9;">A compelling subtitle that explains your value proposition</p>
+          <a href="#" style="background:#ff6b6b;color:white;padding:12px 30px;border-radius:6px;text-decoration:none;display:inline-block;font-weight:600;">Get Started</a>
+        </div>
+      </section>`
+  },
+  {
+    id: 'section-features',
+    label: 'Features Grid',
+    category: 'features',
+    media:
+      '<div style="width:100%;height:40px;background:#48bb78;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;">Features</div>',
+    content:
+      `<section class="features-section" style="padding:80px 20px;background:#f7fafc;">
+        <div style="max-width:1200px;margin:0 auto;">
+          <h2 style="text-align:center;font-size:2.0rem;margin-bottom:2rem;color:#2d3748;">Our Features</h2>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2rem;">
+            <div style="text-align:center;padding:2rem;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+              <div style="width:60px;height:60px;background:#4299e1;border-radius:50%;margin:0 auto 1rem;"></div>
+              <h3 style="font-size:1.25rem;margin-bottom:0.5rem;color:#2d3748;">Fast Performance</h3>
+              <p style="color:#718096;">Lightning-fast loading times for the best user experience</p>
+            </div>
+            <div style="text-align:center;padding:2rem;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+              <div style="width:60px;height:60px;background:#48bb78;border-radius:50%;margin:0 auto 1rem;"></div>
+              <h3 style="font-size:1.25rem;margin-bottom:0.5rem;color:#2d3748;">Secure & Reliable</h3>
+              <p style="color:#718096;">Bank-level security with 99.9% uptime guarantee</p>
+            </div>
+            <div style="text-align:center;padding:2rem;background:white;border-radius:8px;box-shadow:0 2px 10px rgba(0,0,0,0.1);">
+              <div style="width:60px;height:60px;background:#ed8936;border-radius:50%;margin:0 auto 1rem;"></div>
+              <h3 style="font-size:1.25rem;margin-bottom:0.5rem;color:#2d3748;">Easy to Use</h3>
+              <p style="color:#718096;">Intuitive interface designed for everyone</p>
+            </div>
+          </div>
+        </div>
+      </section>`
+  },
+  {
+    id: 'section-pricing',
+    label: 'Pricing Table',
+    category: 'pricing',
+    media:
+      '<div style="width:100%;height:40px;background:#9f7aea;border-radius:4px;display:flex;align-items:center;justify-content:center;color:white;font-size:11px;">Pricing</div>',
+    content:
+      `<section class="pricing-section" style="padding:80px 20px;background:white;">
+        <div style="max-width:1000px;margin:0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;">
+          <div style="border:1px solid #e2e8f0;padding:1.5rem;border-radius:8px;text-align:center;">
+            <h3 style="font-size:1.25rem;margin-bottom:0.5rem;color:#2d3748;">Starter</h3>
+            <div style="font-size:2rem;font-weight:bold;color:#4299e1;margin-bottom:0.5rem;">$9<span style="font-size:0.875rem;color:#718096;">/mo</span></div>
+            <ul style="list-style:none;padding:0;margin-bottom:1rem;color:#718096;">
+              <li style="padding:0.25rem 0;">✓ 5 Projects</li>
+              <li style="padding:0.25rem 0;">✓ 10GB Storage</li>
+              <li style="padding:0.25rem 0;">✓ Email Support</li>
+            </ul>
+            <a href="#" style="display:inline-block;padding:10px 20px;border-radius:6px;background:#4299e1;color:white;text-decoration:none;">Choose</a>
+          </div>
+          <div style="border:2px solid #9f7aea;padding:1.5rem;border-radius:8px;text-align:center;">
+            <h3 style="font-size:1.25rem;margin-bottom:0.5rem;color:#2d3748;">Pro</h3>
+            <div style="font-size:2rem;font-weight:bold;color:#9f7aea;margin-bottom:0.5rem;">$29<span style="font-size:0.875rem;color:#718096;">/mo</span></div>
+            <ul style="list-style:none;padding:0;margin-bottom:1rem;color:#718096;">
+              <li style="padding:0.25rem 0;">✓ Unlimited Projects</li>
+              <li style="padding:0.25rem 0;">✓ 1TB Storage</li>
+              <li style="padding:0.25rem 0;">✓ Priority Support</li>
+            </ul>
+            <a href="#" style="display:inline-block;padding:10px 20px;border-radius:6px;background:#9f7aea;color:white;text-decoration:none;">Choose</a>
+          </div>
+        </div>
+      </section>`
+  },
 ]
 
 /**
@@ -89,19 +158,21 @@ export function registerBlocks(editor: Editor): void {
       }
     })
 
-    // Add custom blocks
-    customBlocks.forEach((block: CustomBlock) => {
-      try {
-        blockManager.add(block.id, {
-          label: block.label,
-          category: block.category,
-          media: block.media,
-          content: block.content,
-        })
-      } catch (blockError) {
-        logger.warn(`Failed to add block ${block.id}:`, blockError)
-      }
-    })
+    // Add custom blocks (if defined)
+    if (customBlocks.length > 0) {
+      customBlocks.forEach((block: CustomBlock) => {
+        try {
+          blockManager.add(block.id, {
+            label: block.label,
+            category: block.category,
+            media: block.media,
+            content: block.content,
+          })
+        } catch (blockError) {
+          logger.warn(`Failed to add block ${block.id}:`, blockError)
+        }
+      })
+    }
 
     logger.info('Custom blocks registered successfully')
   } catch (error) {

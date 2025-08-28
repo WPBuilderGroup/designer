@@ -109,9 +109,13 @@ export default function LeftDock() {
     setActivePanel(item.id)
 
     if (item.id === 'pages-layers') {
-      setShowDrawer(!showDrawer)
+      setShowDrawer(true)
       setShowGlobalStyles(false)
-      if (!showDrawer && item.command) editor.runCommand(item.command)
+      if (item.command) editor.runCommand(item.command)
+    } else if (item.id === 'blocks' || item.id === 'assets') {
+      setShowDrawer(true)
+      setShowGlobalStyles(false)
+      if (item.command) editor.runCommand(item.command)
     } else if (item.id === 'global-styles') {
       setShowGlobalStyles(!showGlobalStyles)
       setShowDrawer(false)
@@ -187,7 +191,7 @@ export default function LeftDock() {
             </div>
           )}
 
-          {drawerContent.type === 'layers' && drawerContent.panelElement && (
+          {(drawerContent.type === 'layers' || drawerContent.type === 'blocks' || drawerContent.type === 'assets') && drawerContent.panelElement && (
             <div
               className="h-full overflow-y-auto p-2"
               ref={(el) => {

@@ -275,17 +275,52 @@ export function registerViewCommands(editor: Editor) {
 
   editor.Commands.add('open-blocks', {
     run(ed: Editor) {
-      const view = ed.Blocks?.render?.()
+      // GrapesJS 0.21 uses BlockManager
+      const view = (ed as any).BlockManager?.render?.()
       const el = resolveViewEl(view)
-      if (el) mountInViewsContainer(ed, el)
+      if (el) {
+        window.dispatchEvent(
+          new CustomEvent('gjs-show-drawer', {
+            detail: { panelType: 'blocks', panelElement: el },
+          })
+        )
+      }
     },
   })
 
   editor.Commands.add('open-assets', {
     run(ed: Editor) {
-      const view = ed.Assets?.render?.()
+      // GrapesJS 0.21 uses AssetManager
+      const view = (ed as any).AssetManager?.render?.()
       const el = resolveViewEl(view)
-      if (el) mountInViewsContainer(ed, el)
+      if (el) {
+        window.dispatchEvent(
+          new CustomEvent('gjs-show-drawer', {
+            detail: { panelType: 'assets', panelElement: el },
+          })
+        )
+      }
+    },
+  })
+
+  // Custom command to show Pages & Layers in external drawer
+  editor.Commands.add('open-pages-layers', {
+    run(ed: Editor) {
+      try {
+        const pagesView = (ed as any).Pages?.render?.()
+        const layersView = (ed as any).LayerManager?.render?.()
+        const pagesElement = resolveViewEl(pagesView)
+        const layersElement = resolveViewEl(layersView)
+        if (pagesElement || layersElement) {
+          window.dispatchEvent(
+            new CustomEvent('gjs-show-drawer', {
+              detail: { panelType: 'pages-layers', pagesElement, layersElement },
+            })
+          )
+        }
+      } catch (err) {
+        logger.warn('open-pages-layers failed', err)
+      }
     },
   })
 

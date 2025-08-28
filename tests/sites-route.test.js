@@ -1,9 +1,9 @@
-const { test } = require('node:test')
-const assert = require('node:assert/strict')
-const { NextRequest } = require('next/server')
-const { GET } = require('../build-test/route.js')
-const fs = require('fs/promises')
-const path = require('path')
+import { test } from 'vitest'
+import assert from 'node:assert/strict'
+import { NextRequest } from 'next/server'
+import { GET } from '../src/app/sites/[...site]/route'
+import fs from 'fs/promises'
+import path from 'path'
 
 const baseDir = path.resolve(process.cwd(), '.next', 'cache', 'sites')
 

@@ -9,6 +9,14 @@ export function sanitizeHtml(value: string) {
 }
 
 export function sanitizeCss(value: string) {
-  return DOMPurify.sanitize(value)
+  // Remove any embedded HTML/script tags
+  let css = value.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+  css = css.replace(/<[^>]*>/g, '')
+
+  // Neutralize javascript: protocol and legacy expression()
+  css = css.replace(/javascript\s*:/gi, '')
+  css = css.replace(/expression\s*\(/gi, '/* expression removed */(')
+
+  return css
 }
 

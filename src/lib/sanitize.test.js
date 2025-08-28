@@ -1,6 +1,6 @@
-import { describe, it } from 'node:test';
+import { describe, it } from 'vitest';
 import assert from 'node:assert/strict';
-import { sanitizeHtml, sanitizeCss } from './sanitize.mjs';
+import { sanitizeHtml, sanitizeCss } from './sanitize.ts';
 
 describe('sanitize', () => {
   it('removes script tags from html', () => {

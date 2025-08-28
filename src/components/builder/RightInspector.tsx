@@ -11,19 +11,19 @@ import { logger } from '@/lib/logger'
 // Helper to safely get StyleManager element after editor loaded
 function resolveStyleEl(ed?: GjsEditor): HTMLElement | null {
   if (!ed) return null
-  const sm = ed.StyleManager
-  const isLoaded =
-    typeof ed.isLoaded === 'function' ? ed.isLoaded() : !!ed.getModel?.()
-  if (!isLoaded) return null
-  const view: ManagerView | undefined =
-    typeof sm.getView === 'function' ? sm.getView() : undefined
-  const el = view?.el ?? sm.render().el
+  const sm: any = (ed as any).StyleManager || (ed as any).Styles
+  const isLoaded = typeof (ed as any).isLoaded === 'function' ? (ed as any).isLoaded() : !!(ed as any).getModel?.()
+  if (!isLoaded || !sm) return null
+  const view = typeof sm.getView === 'function' ? sm.getView() : undefined
+  const rendered = typeof sm.render === 'function' ? sm.render() : undefined
+  const el = (view && (view as any).el) || (rendered && (rendered as any).el) || rendered
   return el instanceof HTMLElement ? el : null
 }
 
 export default function RightInspector() {
   const [activeTab, setActiveTab] = useState<'styles' | 'properties'>('styles')
   const [editor, setEditor] = useState<GjsEditor | null>(null)
+  const [selectionName, setSelectionName] = useState<string>('None')
   const stylesContainerRef = useRef<HTMLDivElement>(null)
   const propertiesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -39,6 +39,13 @@ export default function RightInspector() {
 
     const handleComponentSelect = () => {
       refreshManagers()
+      try {
+        const sel: any = (editor as any)?.getSelected?.()
+        const name = sel?.get?.('name') || sel?.getName?.() || sel?.get?.('tagName') || 'Element'
+        setSelectionName(name)
+      } catch {
+        setSelectionName('Element')
+      }
     }
 
     window.addEventListener('gjs-ready', handleGjsReady as EventListener)
@@ -68,9 +75,9 @@ export default function RightInspector() {
 
       // Mount Trait Manager (Properties)
       const propertiesContainer = propertiesContainerRef.current
-      const tm = editorInstance.TraitManager
-      const tmView = tm.render()
-      const tmEl = tmView.el
+      const tm: any = (editorInstance as any).TraitManager
+      const tmRendered = tm?.render?.()
+      const tmEl = (tmRendered && tmRendered.el) || tmRendered
 
       if (propertiesContainer) {
         propertiesContainer.innerHTML = ''
@@ -95,8 +102,23 @@ export default function RightInspector() {
   const refreshManagers = () => {
     if (!editor) return
     try {
-      ;(editor as any).StyleManager?.render?.()
-      editor.TraitManager?.render?.()
+      // Re-bind Style Manager element to ensure visibility after internal re-renders
+      const stylesContainer = stylesContainerRef.current
+      const smEl = resolveStyleEl(editor)
+      if (stylesContainer && smEl) {
+        stylesContainer.innerHTML = ''
+        stylesContainer.appendChild(smEl)
+      }
+
+      // Re-bind Trait Manager element as well
+      const propertiesContainer = propertiesContainerRef.current
+      const tm: any = (editor as any).TraitManager
+      const tmRendered = tm?.render?.()
+      const tmEl = (tmRendered && tmRendered.el) || tmRendered
+      if (propertiesContainer && tmEl instanceof HTMLElement) {
+        propertiesContainer.innerHTML = ''
+        propertiesContainer.appendChild(tmEl)
+      }
     } catch (error) {
       logger.warn('Failed to refresh managers', {
         error: error instanceof Error ? error.message : String(error),
@@ -106,14 +128,7 @@ export default function RightInspector() {
 
   const handleTabClick = (tab: 'styles' | 'properties') => {
     setActiveTab(tab)
-    setTimeout(() => {
-      if (!editor) return
-      if (tab === 'styles') {
-        ;(editor as any).StyleManager?.render?.()
-      } else {
-        editor.TraitManager?.render?.()
-      }
-    }, 50)
+    setTimeout(() => refreshManagers(), 50)
   }
 
   return (
@@ -139,9 +154,19 @@ export default function RightInspector() {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'styles' && (
           <div className="h-full">
+            {/* Selection header like reference UI */}
+            <div className="flex items-center justify-between px-3 py-2 text-xs border-b border-gray-200">
+              <div className="text-gray-600">
+                Selection
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded border border-gray-300 bg-white text-gray-700">
+                  {selectionName}
+                </span>
+              </div>
+              <div className="text-gray-400">State ▾</div>
+            </div>
             <div
               ref={stylesContainerRef}
-              className="overflow-auto h-[calc(100vh-48px)] p-2"
+              className="overflow-auto h-[calc(100vh-48px)] p-2 inspector-sm"
             >
               {!editor && (
                 <div className="text-sm text-gray-500 p-4 text-center">

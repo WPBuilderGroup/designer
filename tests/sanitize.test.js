@@ -1,6 +1,6 @@
-import { test } from 'node:test'
+import { test } from 'vitest'
 import assert from 'node:assert/strict'
-import { sanitizeHtml, sanitizeCss } from '../src/lib/sanitize.js'
+import { sanitizeHtml, sanitizeCss } from '../src/lib/sanitize.ts'
 
 test('sanitizeHtml removes scripts and disallowed attrs', () => {
   const dirty = '<img src=x onerror="alert(1)"><script>alert("xss")</script><p>ok</p>'

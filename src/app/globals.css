@@ -43,6 +43,36 @@ code, pre {
   .toolbar {
     @apply flex items-center gap-2;
   }
+
+  /* Inspector (Right Sidebar) layout styles */
+  .inspector-sm .gjs-sm-sectors {
+    background: #fff !important;
+  }
+  .inspector-sm .gjs-sm-sector-title{
+    @apply border-b border-gray-200 bg-white text-gray-800;
+    font-weight: 500 !important;
+    padding: 10px 12px !important;
+  }
+  .inspector-sm .gjs-sm-properties{
+    padding: 10px 8px !important;
+  }
+  .inspector-sm .gjs-field,
+  .inspector-sm .gjs-clm-select,
+  .inspector-sm .gjs-clm-field{
+    @apply bg-white border border-gray-200 rounded;
+  }
+  .inspector-sm .gjs-field input,
+  .inspector-sm .gjs-field select,
+  .inspector-sm .gjs-field textarea{
+    @apply text-gray-800;
+  }
+  .inspector-sm .gjs-sm-layer,
+  .inspector-sm .gjs-sm-preview-file{
+    @apply border border-gray-200;
+  }
+  .inspector-sm .gjs-btn-prim{
+    @apply bg-gray-100;
+  }
 }
 
 /* Prevent drag-and-drop blocking CSS resets */

@@ -1,7 +1,7 @@
 import assert from 'node:assert'
-import { describe, it } from 'node:test'
+import { describe, it } from 'vitest'
 
-import { sanitizeHtml, sanitizeCss } from './sanitize'
+import { sanitizeHtml, sanitizeCss } from './sanitize.ts'
 
 describe('sanitizeHtml', () => {
   it('removes scripts and event handlers', () => {
