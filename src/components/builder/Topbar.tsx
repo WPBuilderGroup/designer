@@ -93,6 +93,10 @@ export default function Topbar() {
     window.dispatchEvent(new CustomEvent('publish-request', { detail: { project, page } }))
   }
 
+  const handleImportToDb = () => {
+    window.dispatchEvent(new CustomEvent('gjs-import-request'))
+  }
+
   return (
     <>
       <div className="h-full flex items-center justify-between px-4 bg-white border-b border-gray-200">
@@ -145,6 +149,16 @@ export default function Topbar() {
 
         {/* Right: Actions */}
         <div className="flex items-center space-x-2">
+          <button
+            onClick={handleImportToDb}
+            className="px-3 py-1.5 text-sm font-medium rounded text-gray-700 bg-gray-100 hover:bg-gray-200"
+            title="Import current canvas into DB"
+          >
+            <svg className="w-4 h-4 mr-1.5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+            </svg>
+            Import to DB
+          </button>
           <button
             onClick={handlePreview}
             className={`px-3 py-1.5 text-sm font-medium rounded transition-colors ${

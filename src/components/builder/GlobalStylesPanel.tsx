@@ -104,56 +104,31 @@ export default function GlobalStylesPanel({ isOpen, onClose, editor }: GlobalSty
 
     const cssVariables = `
       :root {
-        --t-primary: ${styles.colors.primary};
-        --t-secondary: ${styles.colors.secondary};
-        --t-accent: ${styles.colors.accent};
-        --t-success: ${styles.colors.success};
-        --t-warning: ${styles.colors.warning};
-        --t-error: ${styles.colors.error};
-        --t-body-font: ${styles.typography.bodyFont};
-        --t-body-size: ${styles.typography.bodySize};
-        --t-body-line-height: ${styles.typography.bodyLineHeight};
-        --t-heading-font: ${styles.typography.headingFont};
-        --t-heading-weight: ${styles.typography.headingWeight};
-        --t-subheading-font: ${styles.typography.subheadingFont};
-        --t-subheading-size: ${styles.typography.subheadingSize};
-        --t-button-font: ${styles.typography.buttonFont};
-        --t-button-weight: ${styles.typography.buttonWeight};
+        --gjs-t-color-primary: ${styles.colors.primary};
+        --gjs-t-color-secondary: ${styles.colors.secondary};
+        --gjs-t-color-accent: ${styles.colors.accent};
+        --gjs-t-color-success: ${styles.colors.success};
+        --gjs-t-color-warning: ${styles.colors.warning};
+        --gjs-t-color-error: ${styles.colors.error};
       }
 
-      body {
-        font-family: var(--t-body-font);
-        font-size: var(--t-body-size);
-        line-height: var(--t-body-line-height);
+      .gjs-t-body{
+        font-family: ${styles.typography.bodyFont};
+        font-size: ${styles.typography.bodySize};
+        line-height: ${styles.typography.bodyLineHeight};
       }
-
-      h1, h2, h3, h4, h5, h6 {
-        font-family: var(--t-heading-font);
-        font-weight: var(--t-heading-weight);
-        color: var(--t-primary);
+      .gjs-t-h1{
+        color: var(--gjs-t-color-secondary);
+        font-family: ${styles.typography.headingFont};
       }
-
-      .subheading {
-        font-family: var(--t-subheading-font);
-        font-size: var(--t-subheading-size);
-        color: var(--t-secondary);
+      .gjs-t-h2{
+        color: #601843;
+        font-family: ${styles.typography.subheadingFont};
+        font-size: ${styles.typography.subheadingSize};
       }
-
-      button, .btn {
-        font-family: var(--t-button-font);
-        font-weight: var(--t-button-weight);
-      }
-
-      .btn-primary { background-color: var(--t-primary); border-color: var(--t-primary); }
-      .btn-secondary { background-color: var(--t-secondary); border-color: var(--t-secondary); }
-      .btn-success { background-color: var(--t-success); border-color: var(--t-success); }
-
-      .text-primary { color: var(--t-primary); }
-      .text-secondary { color: var(--t-secondary); }
-      .text-accent { color: var(--t-accent); }
-      .text-success { color: var(--t-success); }
-      .text-warning { color: var(--t-warning); }
-      .text-error { color: var(--t-error); }
+      .gjs-t-button{ background-color: var(--gjs-t-color-primary); color:#fff; }
+      .gjs-t-link{ color: var(--gjs-t-color-primary); text-decoration: underline; }
+      .gjs-t-border{ border-color: #e0e0e0; }
     `
 
     styleElement.textContent = cssVariables

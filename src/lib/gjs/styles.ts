@@ -25,6 +25,18 @@ interface StyleManagerLike {
  */
 export const styleManagerConfig: StyleSector[] = [
   {
+    name: 'Theme',
+    open: true,
+    properties: [
+      { property: 'var(--gjs-t-color-primary)', type: 'color', name: 'Primary', defaults: '#cf549e' },
+      { property: 'var(--gjs-t-color-secondary)', type: 'color', name: 'Secondary', defaults: '#b9227d' },
+      { property: 'var(--gjs-t-color-accent)', type: 'color', name: 'Accent', defaults: '#ffb347' },
+      { property: 'var(--gjs-t-color-success)', type: 'color', name: 'Success', defaults: '#28a745' },
+      { property: 'var(--gjs-t-color-warning)', type: 'color', name: 'Warning', defaults: '#ffc107' },
+      { property: 'var(--gjs-t-color-error)', type: 'color', name: 'Error', defaults: '#dc3545' },
+    ] as any,
+  },
+  {
     name: 'Layout',
     open: false,
     buildProps: [

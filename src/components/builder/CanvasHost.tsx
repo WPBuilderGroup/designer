@@ -10,6 +10,7 @@ import { applyStyleManager } from '@/lib/gjs/styles'
 import { applyPanels, registerViewCommands } from '@/lib/gjs/panels'
 import { configureAssets } from '@/lib/gjs/assets'
 import { registerBlocks } from '@/lib/gjs/blocks'
+import PagesPanel from './PagesPanel'
 
 type CanvasHostProps = {
   className?: string;
@@ -162,6 +163,122 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       requestAnimationFrame(mountManagers);
       // Notify outer UI that editor is ready
       window.dispatchEvent(new CustomEvent('gjs-ready', { detail: { editor } }))
+
+      // Attempt to bootstrap content from public export if editor is empty
+      ;(async () => {
+        try {
+          const qs = new URLSearchParams(globalThis.location.search)
+          const project = qs.get('project') || 'default'
+          const pageSlug = qs.get('page') || 'home'
+          const workspace = qs.get('workspace') || 'default-workspace'
+          const base = `/projects/${encodeURIComponent(workspace)}/${encodeURIComponent(project)}/`
+          const htmlRes = await fetch(base + 'index.html').catch(() => null)
+          const okHtml = htmlRes && htmlRes.ok ? await htmlRes.text() : ''
+          // try to infer CSS href from HTML, fallback to common paths
+          let cssText = ''
+          if (okHtml) {
+            try {
+              const doc = new DOMParser().parseFromString(okHtml, 'text/html')
+              const links = Array.from(doc.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[]
+              const hrefs = links.map(l => l.getAttribute('href') || '').filter(Boolean)
+              const cssPathCandidates = [...hrefs, 'style.css', 'css/style.css', 'styles.css']
+              for (const rel of cssPathCandidates) {
+                try {
+                  const res = await fetch(base + rel)
+                  if (res.ok) {
+                    const txt = await res.text()
+                    cssText += `\n/* ${rel} */\n` + txt
+                  }
+                } catch {}
+              }
+              // Resolve one-level @import and rewrite relative URLs
+              async function resolveCss(input: string): Promise<string> {
+                let out = input
+                // Fetch @import url('...') relative
+                const importRe = /@import\s+url\((['\"]?)(?!https?:|\/)([^)\'\"]+)\1\)\s*;?/g
+                const imports: Array<{ match: string; path: string }> = []
+                let m: RegExpExecArray | null
+                while ((m = importRe.exec(input))) {
+                  imports.push({ match: m[0], path: m[2] })
+                }
+                for (const imp of imports) {
+                  try {
+                    const r = await fetch(base + imp.path.replace(/^\.\//, ''))
+                    if (r.ok) {
+                      const t = await r.text()
+                      out = out.replace(imp.match, `\n/* inlined: ${imp.path} */\n${t}\n`)
+                    }
+                  } catch {}
+                }
+                // Rewrite url(...) relative assets
+                out = out.replace(/url\((['\"]?)(?!https?:|\/)([^)\'\"]+)\1\)/g, (_mm, _q, p) => `url(${base}${String(p).replace(/^\.\//, '')})`)
+                return out
+              }
+              if (cssText) cssText = await resolveCss(cssText)
+              // Rewrite relative asset URLs in HTML (img/src/href)
+              doc.querySelectorAll('[src], [href]').forEach((el) => {
+                const hasSrc = (el as HTMLElement).hasAttribute('src')
+                const hasHref = (el as HTMLElement).hasAttribute('href')
+                const val = hasSrc
+                  ? (el as HTMLElement).getAttribute('src')
+                  : (hasHref ? (el as HTMLElement).getAttribute('href') : null)
+                if (!val) return
+                const isAbs = /^(https?:)?\//i.test(val)
+                if (!isAbs) {
+                  const fixed = base + val.replace(/^\.\//, '')
+                  if (hasSrc) (el as HTMLElement).setAttribute('src', fixed)
+                  if (hasHref) (el as HTMLElement).setAttribute('href', fixed)
+                }
+              })
+              // Use only <body> content as components
+              let bodyHtml = doc.body ? doc.body.innerHTML : okHtml
+              // Optional: ensure basic :root variables if missing
+              if (cssText && !/:root\s*\{[^}]*--gjs-t-color-primary/.test(cssText)) {
+                cssText = `:root{--gjs-t-color-primary:#cf549e;--gjs-t-color-secondary:#b9227d;--gjs-t-color-accent:#ffb347;--gjs-t-color-success:#28a745;--gjs-t-color-warning:#ffc107;--gjs-t-color-error:#dc3545;}` + "\n" + cssText
+              }
+              const isEmpty = !editor.getHtml()?.trim()
+              if (isEmpty && (bodyHtml || cssText)) {
+                if (bodyHtml) editor.setComponents(bodyHtml)
+                if (cssText) editor.setStyle(cssText)
+                logger.info('Bootstrapped content from export (parsed)')
+                // Ensure page exists in DB and save initial content
+                try {
+                  let pageId: string | null = null
+                  const getList = await fetch(`/api/pages?project=${encodeURIComponent(project)}`).then(r => r.ok ? r.json() : { pages: [] as any[] })
+                  const pages: any[] = getList.pages || []
+                  const found = pages.find(p => p.slug === pageSlug)
+                  if (found) pageId = found.id
+                  else {
+                    const created = await fetch(`/api/pages?project=${encodeURIComponent(project)}`, {
+                      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug: pageSlug })
+                    }).then(r => r.ok ? r.json() : null)
+                    pageId = created?.page?.id || null
+                  }
+                  if (pageId) {
+                    await fetch(`/api/pages/${pageId}`, {
+                      method: 'PUT', headers: { 'content-type': 'application/json' },
+                      body: JSON.stringify({ grapesJson: { 'gjs-html': editor.getHtml(), 'gjs-css': editor.getCss(), 'gjs-components': editor.getComponents(), 'gjs-styles': editor.getStyle() } })
+                    }).catch(() => {})
+                    // set current id for autosave loop
+                    window.dispatchEvent(new CustomEvent('gjs-page-selected', { detail: { id: pageId, slug: pageSlug } }))
+                  }
+                } catch {}
+                return
+              }
+            } catch {}
+          }
+          const cssRes = await fetch(base + 'style.css').catch(() => null)
+          const okCss = cssRes && cssRes.ok ? await cssRes.text() : ''
+          const isEmpty = !editor.getHtml()?.trim()
+          if (isEmpty && (okHtml || okCss)) {
+            if (okHtml) editor.setComponents(okHtml)
+            if (okCss) editor.setStyle(okCss)
+            logger.info('Bootstrapped content from public export', { base })
+          }
+        } catch (err) {
+          logger.warn('Failed to bootstrap content from public export', { error: String(err) })
+        }
+      })()
     });
 
     // Bridge component selection to external panels
@@ -173,6 +290,65 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     editor.on('component:add component:remove component:update style:target', () => {
       window.dispatchEvent(new CustomEvent('gjs-history-change'))
     })
+
+    // Track current page id for autosave
+    let currentPageId: string | null = null
+    const onPageSelected = (e: any) => { currentPageId = e.detail?.id || null }
+    window.addEventListener('gjs-page-selected', onPageSelected as EventListener)
+
+    // Debounced autosave to DB when page is known
+    let saveTimeout: any
+    editor.on('update', () => {
+      clearTimeout(saveTimeout)
+      saveTimeout = setTimeout(async () => {
+        try {
+          const payload = {
+            grapesJson: {
+              'gjs-html': editor.getHtml(),
+              'gjs-css': editor.getCss(),
+              'gjs-components': editor.getComponents(),
+              'gjs-styles': editor.getStyle(),
+            }
+          }
+          if (currentPageId) {
+            await fetch(`/api/pages/${currentPageId}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) })
+          }
+        } catch (err) {
+          logger.warn('Autosave failed', { error: String(err) })
+        }
+      }, 800)
+    })
+
+    // Manual import-to-DB handler
+    const importHandler = async () => {
+      try {
+        const qs = new URLSearchParams(globalThis.location.search)
+        const project = qs.get('project') || 'default'
+        const pageSlug = qs.get('page') || 'home'
+        // ensure pageId
+        let pageId: string | null = currentPageId
+        if (!pageId) {
+          const list = await fetch(`/api/pages?project=${encodeURIComponent(project)}`).then(r => r.ok ? r.json() : { pages: [] })
+          const found = (list.pages || []).find((p: any) => p.slug === pageSlug)
+          if (found) pageId = found.id
+          else {
+            const created = await fetch(`/api/pages?project=${encodeURIComponent(project)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ slug: pageSlug }) }).then(r => r.ok ? r.json() : null)
+            pageId = created?.page?.id || null
+          }
+        }
+        if (pageId) {
+          await fetch(`/api/pages/${pageId}`, {
+            method: 'PUT', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ grapesJson: { 'gjs-html': editor.getHtml(), 'gjs-css': editor.getCss(), 'gjs-components': editor.getComponents(), 'gjs-styles': editor.getStyle() } })
+          })
+          logger.info('Imported current canvas into DB', { pageId, pageSlug })
+          window.dispatchEvent(new CustomEvent('gjs-page-selected', { detail: { id: pageId, slug: pageSlug } }))
+        }
+      } catch (err) {
+        logger.warn('Import to DB failed', { error: String(err) })
+      }
+    }
+    window.addEventListener('gjs-import-request', importHandler as EventListener)
 
     return () => {
       try {
@@ -187,6 +363,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
       if (process.env.NODE_ENV === 'development' && window.__gjs === editor) {
         delete window.__gjs;
       }
+      window.removeEventListener('gjs-page-selected', onPageSelected as EventListener)
+      window.removeEventListener('gjs-import-request', importHandler as EventListener)
     };
   }, []);
 
@@ -194,30 +372,8 @@ export default function CanvasHost({ className }: CanvasHostProps) {
     <div className={className ?? 'h-full w-full flex'}>
       {/* Left sidebar */}
       <aside className="w-[300px] shrink-0 border-r border-gray-200 bg-white flex flex-col">
-        {/* Pages */}
-        <div className="border-b border-gray-200">
-          <div className="flex items-center justify-between px-3 py-2 bg-gray-50">
-            <div className="text-sm font-medium text-gray-700">Pages</div>
-            <div className="flex items-center gap-1">
-              <button
-                aria-label="Add page"
-                className="px-2 py-1 text-xs rounded bg-white border border-gray-300 text-gray-700 hover:bg-gray-100"
-                onClick={() => {
-                  const ed = editorRef.current as any
-                  if (!ed?.Pages) return
-                  const curr = ed.Pages.getAll?.() || []
-                  const idx = curr.length + 1
-                  const id = `page-${idx}`
-                  ed.Pages.add?.({ id, styles: '', component: '' })
-                  try { ed.Pages.select?.(id) } catch {}
-                }}
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <div className="h-48 overflow-auto" ref={pagesRef} aria-label="Pages" />
-        </div>
+        {/* Pages Panel (React) */}
+        <PagesPanel project={new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '').get('project') || 'default'} />
 
         {/* Layers */}
         <div className="flex-1 min-h-0 flex flex-col">

@@ -9,6 +9,20 @@ interface SeoPayload {
 }
 
 // Update page by id with grapesJson and optional seo, return {page}
+export async function GET(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params
+  const { rows } = await query(
+    `SELECT id, slug, gjs_html, gjs_css, gjs_components, gjs_styles, updated_at
+     FROM pages WHERE id = $1 LIMIT 1`,
+    [id]
+  )
+  if (rows.length === 0) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  return NextResponse.json({ page: rows[0] })
+}
+
 export async function PUT(
   req: NextRequest,
   { params }: { params: { id: string } }
@@ -80,4 +94,28 @@ export async function PUT(
   )
 
   return NextResponse.json({ page: rows[0] })
+}
+
+// Rename (slug only)
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params
+  let body: Record<string, unknown> = {}
+  try { body = await req.json() } catch {}
+  const slug = typeof body['slug'] === 'string' ? body['slug'] : null
+  if (!slug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 })
+  await query('UPDATE pages SET slug=$2, updated_at=NOW() WHERE id=$1', [id, slug])
+  const { rows } = await query('SELECT id, slug, updated_at FROM pages WHERE id=$1', [id])
+  return NextResponse.json({ page: rows[0] })
+}
+
+export async function DELETE(
+  _req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const { id } = params
+  await query('DELETE FROM pages WHERE id = $1', [id])
+  return NextResponse.json({ success: true })
 }

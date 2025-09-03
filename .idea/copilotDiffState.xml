@@ -12,6 +12,15 @@
             </PendingDiffInfo>
           </value>
         </entry>
+        <entry key="$PROJECT_DIR$/src/lib/types.ts">
+          <value>
+            <PendingDiffInfo>
+              <option name="filePath" value="$PROJECT_DIR$/src/lib/types.ts" />
+              <option name="originalContent" value="export interface Workspace {&#10;  id: string;&#10;  name: string;&#10;  role?: 'owner' | 'admin' | 'member';&#10;  createdAt: number;&#10;}&#10;&#10;export type ProjectStatus = 'draft' | 'published';&#10;&#10;export type Project = {&#10;  id: string;&#10;  workspaceId: string;&#10;  name: string;&#10;  slug: string;&#10;  status: ProjectStatus;&#10;  thumb?: string;&#10;  updatedAt: number;&#10;};&#10;" />
+              <option name="updatedContent" value="export interface Workspace {&#10;  id: string;&#10;  name: string;&#10;  role?: 'owner' | 'admin' | 'member';&#10;  createdAt: number;&#10;}&#10;&#10;export type ProjectStatus = 'draft' | 'published';&#10;&#10;export type Project = {&#10;  id: string;&#10;  name: string;&#10;  slug: string;&#10;  status: ProjectStatus;&#10;  updatedAt: number;&#10;  thumbUrl: string;   // e.g. /projects/&lt;slug&gt;/thumb.jpg&#10;  exportDir: string;  // e.g. /projects/&lt;slug&gt;/&#10;};" />
+            </PendingDiffInfo>
+          </value>
+        </entry>
       </map>
     </option>
   </component>
